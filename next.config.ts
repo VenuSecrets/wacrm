@@ -62,6 +62,20 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   /**
+   * Standalone output for container deployments (Railway/Docker).
+   *
+   * Emits `.next/standalone` with a minimal `server.js` and only the
+   * traced `node_modules`, so the runtime image doesn't need a full
+   * `npm install`. `outputFileTracingRoot` pins the trace root to this
+   * project folder — otherwise Next.js walks up and picks the parent
+   * lockfile (`../SOFWARE VENUS/package-lock.json`), which nests the
+   * standalone output under an extra subfolder and breaks the Docker
+   * COPY paths.
+   */
+  output: "standalone",
+  outputFileTracingRoot: __dirname,
+
+  /**
    * Cache-Control policy.
    *
    * Why this exists:
