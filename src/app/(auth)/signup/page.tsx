@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { MessageSquare, CheckCircle, UsersRound } from "lucide-react";
+import { MessageSquare, UsersRound } from "lucide-react";
 
 // `useSearchParams` opts the component out of static prerendering
 // unless wrapped in Suspense — same pattern as /login.
@@ -28,11 +28,11 @@ export default function SignupPage() {
 
 function SignupPageInner() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   // When the user lands here from `/join/<token>` we carry the
-  // invite token in the query so it survives the signup → email
-  // verification → redirect round-trip. `emailRedirectTo` below
-  // points back at /join/<token> so the user lands on the redeem
-  // step after verifying instead of being dropped on /dashboard.
+  // invite token in the query so we can send them straight to the
+  // redeem step after their account is created, instead of dropping
+  // them on /dashboard.
   const inviteToken = searchParams.get("invite");
 
   const [fullName, setFullName] = useState("");
@@ -41,7 +41,6 @@ function SignupPageInner() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const supabase = createClient();
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -60,72 +59,48 @@ function SignupPageInner() {
 
     setLoading(true);
 
-    // If we have an invite token, point Supabase's verification
-    // email back at the join page so the user can accept after
-    // verifying. Without a token, Supabase uses its default
-    // redirect (the app root).
-    const emailRedirectTo = inviteToken
-      ? `${window.location.origin}/join/${encodeURIComponent(inviteToken)}`
-      : undefined;
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-        ...(emailRedirectTo ? { emailRedirectTo } : {}),
-      },
+    // Create the account server-side. The route uses the admin API
+    // to create an already-confirmed user, so no confirmation email
+    // is sent — this sidesteps Supabase's built-in email rate limit
+    // ("email rate limit exceeded") that would otherwise block
+    // signups on a deploy without custom SMTP configured.
+    const res = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, fullName }),
     });
 
-    if (error) {
-      setError(error.message);
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      setError(data?.error ?? "Could not create account. Please try again.");
       setLoading(false);
       return;
     }
 
-    setSuccess(true);
-    setLoading(false);
-  };
+    // The user is confirmed, so sign them in right away to establish
+    // the session, then route to the invite or the dashboard.
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-  if (success) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <Card className="w-full max-w-md border-border bg-card">
-          <CardHeader className="items-center text-center">
-            <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-              <CheckCircle className="h-6 w-6 text-primary" />
-            </div>
-            <CardTitle className="text-xl text-foreground">
-              Check your email
-            </CardTitle>
-            <CardDescription className="text-muted-foreground">
-              We&apos;ve sent a confirmation link to{" "}
-              <span className="text-foreground">{email}</span>. Please check your
-              inbox and click the link to verify your account.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link
-              href={
-                inviteToken
-                  ? `/login?invite=${encodeURIComponent(inviteToken)}`
-                  : "/login"
-              }
-            >
-              <Button
-                variant="outline"
-                className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                Back to sign in
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
+    if (signInError) {
+      // Account exists but auto sign-in failed (rare) — send them to
+      // the login page to finish manually.
+      router.push(
+        inviteToken
+          ? `/login?invite=${encodeURIComponent(inviteToken)}`
+          : "/login",
+      );
+      return;
+    }
+
+    router.push(
+      inviteToken ? `/join/${encodeURIComponent(inviteToken)}` : "/dashboard",
     );
-  }
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
