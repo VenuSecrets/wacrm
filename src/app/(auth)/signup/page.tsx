@@ -39,6 +39,7 @@ function SignupPageInner() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
@@ -67,7 +68,7 @@ function SignupPageInner() {
     const res = await fetch("/api/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, fullName }),
+      body: JSON.stringify({ email, password, fullName, code }),
     });
 
     if (!res.ok) {
@@ -186,6 +187,22 @@ function SignupPageInner() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
+                className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary/20"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="code" className="text-muted-foreground">
+                Access code
+              </Label>
+              <Input
+                id="code"
+                type="text"
+                placeholder="Enter your access code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                required
+                autoComplete="off"
                 className="border-border bg-muted text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-primary/20"
               />
             </div>

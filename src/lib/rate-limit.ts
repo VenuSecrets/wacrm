@@ -160,10 +160,10 @@ export const RATE_LIMITS = {
    *  drafting flat-out. */
   aiDraftAccount: { limit: 60, windowMs: 60_000 },
   /** Account signup (public, per-IP). Creating a confirmed user is a
-   *  rare, deliberate action; 10/min per IP sits comfortably above a
+   *  rare, deliberate action; 30/min per IP sits comfortably above a
    *  human retrying a fat-fingered form while bounding scripted
    *  mass-registration from a single origin. */
-  signup: { limit: 10, windowMs: 60_000 },
+  signup: { limit: 30, windowMs: 60_000 },
 } as const;
 
 /** Test-only helper. Clears the in-memory state so unit tests don't

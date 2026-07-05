@@ -40,6 +40,15 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 const MIN_PASSWORD_LEN = 6;
 const MAX_NAME_LEN = 120;
 
+// Registration gate. Visitors must enter this code on the signup
+// form for the account to be created — a lightweight substitute for
+// email verification that never sends a message (so it can't hit
+// Supabase's email rate limit). Override it per-deploy with the
+// SIGNUP_ACCESS_CODE env var; the default keeps a fresh clone
+// working out of the box. Comparison is case-insensitive and
+// trims surrounding whitespace so a copy-pasted code still matches.
+const ACCESS_CODE = process.env.SIGNUP_ACCESS_CODE ?? "VENUS2026";
+
 /**
  * Best-effort client IP. Every reverse proxy (Railway, Vercel,
  * Hostinger, Cloudflare) sets `x-forwarded-for`; we take the
@@ -63,12 +72,23 @@ export async function POST(request: Request) {
     email?: unknown;
     password?: unknown;
     fullName?: unknown;
+    code?: unknown;
   } | null;
 
   const email = typeof body?.email === "string" ? body.email.trim() : "";
   const password = typeof body?.password === "string" ? body.password : "";
   const fullName =
     typeof body?.fullName === "string" ? body.fullName.trim() : "";
+  const code = typeof body?.code === "string" ? body.code.trim() : "";
+
+  // Gate on the access code before doing any work. Case-insensitive
+  // so "venus2026" and "VENUS2026" both pass.
+  if (code.toLowerCase() !== ACCESS_CODE.trim().toLowerCase()) {
+    return NextResponse.json(
+      { error: "Invalid access code" },
+      { status: 403 },
+    );
+  }
 
   if (!email || !email.includes("@")) {
     return NextResponse.json(
