@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VeneSecrets · Fotos Antes / Después</title>
+<style>
+  :root{
+    --morado:#7C3AED; --morado-osc:#5b21b6; --rosa:#DB2777;
+    --gris:#f4f4f7; --texto:#1f2937; --borde:#e5e7eb; --ok:#16a34a; --error:#dc2626;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  body{background:var(--gris);color:var(--texto);line-height:1.4}
+  header{background:var(--morado);color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  header h1{font-size:18px;font-weight:600}
+  header .user{font-size:13px;opacity:.9;display:flex;align-items:center;gap:10px}
+  header button{background:rgba(255,255,255,.18);color:#fff;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:13px}
+  header button:hover{background:rgba(255,255,255,.3)}
+  .wrap{max-width:760px;margin:0 auto;padding:20px}
+  .card{background:#fff;border:1px solid var(--borde);border-radius:14px;padding:20px;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .card h2{font-size:15px;margin-bottom:12px;color:var(--morado-osc)}
+  label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#374151}
+  input[type=text],input[type=email],input[type=password],input[type=tel],textarea{
+    width:100%;padding:11px 12px;border:1px solid var(--borde);border-radius:9px;font-size:15px;background:#fff}
+  input:focus,textarea:focus{outline:none;border-color:var(--morado);box-shadow:0 0 0 3px rgba(124,58,237,.12)}
+  .btn{background:var(--morado);color:#fff;border:none;padding:12px 18px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;width:100%}
+  .btn:hover{background:var(--morado-osc)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-sec{background:#fff;color:var(--morado);border:1.5px solid var(--morado)}
+  .btn-sec:hover{background:#faf5ff}
+  .hidden{display:none!important}
+  /* Login */
+  #pantallaLogin{max-width:380px;margin:60px auto;padding:20px}
+  #pantallaLogin .card{padding:28px}
+  .logo{text-align:center;font-size:22px;font-weight:700;color:var(--morado);margin-bottom:6px}
+  .sub{text-align:center;font-size:13px;color:#6b7280;margin-bottom:22px}
+  /* Buscador cliente */
+  .buscador{position:relative}
+  .resultados{position:absolute;z-index:20;left:0;right:0;top:100%;background:#fff;border:1px solid var(--borde);border-top:none;border-radius:0 0 10px 10px;max-height:240px;overflow:auto;box-shadow:0 6px 16px rgba(0,0,0,.08)}
+  .resultados div{padding:10px 12px;cursor:pointer;font-size:14px;border-bottom:1px solid #f3f4f6}
+  .resultados div:hover{background:#faf5ff}
+  .resultados .tel{color:#6b7280;font-size:12px}
+  .resultados .nuevo{color:var(--morado);font-weight:600}
+  .elegida{background:#faf5ff;border:1.5px solid var(--morado);border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center}
+  .elegida b{display:block;font-size:15px}
+  .elegida span{font-size:13px;color:#6b7280}
+  .elegida button{background:none;border:none;color:var(--rosa);cursor:pointer;font-size:13px;font-weight:600}
+  /* Zonas de subida */
+  .zonas{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:560px){.zonas{grid-template-columns:1fr}}
+  .dropzone{border:2px dashed #c4b5fd;border-radius:12px;padding:18px 14px;text-align:center;background:#fbfaff}
+  .dropzone.drag{background:#f3e8ff;border-color:var(--morado)}
+  .dropzone .ico{font-size:28px}
+  .dropzone .t{font-weight:600;font-size:14px;margin-top:4px}
+  .dropzone .h{font-size:12px;color:#6b7280;margin-top:8px}
+  .dropzone.despues{border-color:#fbcfe8;background:#fff5fa}
+  .dropzone.despues.drag{background:#ffe4f1;border-color:var(--rosa)}
+  .botones-zona{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+  .bz{background:var(--morado);color:#fff;border:none;padding:10px 14px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer}
+  .bz:hover{filter:brightness(.93)}
+  .bz.gal{background:#fff;color:var(--morado);border:1.5px solid var(--morado)}
+  .dropzone.despues .bz{background:var(--rosa)}
+  .dropzone.despues .bz.gal{background:#fff;color:var(--rosa);border:1.5px solid var(--rosa)}
+  .titzona{font-size:13px;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+  .titzona.antes{color:var(--morado)} .titzona.despues{color:var(--rosa)}
+  .previews{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px;margin-top:10px}
+  .thumb{position:relative;border-radius:8px;overflow:hidden;aspect-ratio:1;border:1px solid var(--borde)}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .thumb .x{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;line-height:1}
+  .thumb .bar{position:absolute;bottom:0;left:0;height:4px;background:var(--ok);width:0;transition:width .2s}
+  .contador{font-size:12px;color:#6b7280;margin-top:6px;font-weight:600}
+  .msg{padding:12px 14px;border-radius:10px;font-size:14px;margin-bottom:14px}
+  .msg.ok{background:#dcfce7;color:#166534} .msg.err{background:#fee2e2;color:#991b1b}
+  textarea{min-height:60px;resize:vertical}
+  .pie{text-align:center;font-size:12px;color:#9ca3af;padding:10px 0 30px}
+</style>
+</head>
+<body>
+
+<!-- ============ PANTALLA DE LOGIN ============ -->
+<div id="pantallaLogin">
+  <div class="card">
+    <div class="logo">VeneSecrets</div>
+    <div class="sub">Fotos antes / después · acceso del personal</div>
+    <div id="loginMsg"></div>
+    <label>Correo</label>
+    <input type="email" id="email" placeholder="tucorreo@venesecrets.com" autocomplete="username" />
+    <div style="height:12px"></div>
+    <label>Contraseña</label>
+    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+    <div style="height:18px"></div>
+    <button class="btn" id="btnLogin">Entrar</button>
+  </div>
+</div>
+
+<!-- ============ APP (tras login) ============ -->
+<div id="app" class="hidden">
+  <header>
+    <h1>📸 Fotos Antes / Después</h1>
+    <div class="user"><span id="emailUsuario"></span><button id="btnSalir">Salir</button></div>
+  </header>
+
+  <div class="wrap">
+    <div id="avisoGlobal"></div>
+
+    <!-- 1. CLIENTE -->
+    <div class="card">
+      <h2>1 · Elige la clienta</h2>
+      <div id="zonaBuscador">
+        <div class="buscador">
+          <input type="text" id="buscarCliente" placeholder="Buscar por nombre o teléfono…" autocomplete="off" />
+          <div id="resultados" class="resultados hidden"></div>
+        </div>
+      </div>
+      <div id="clienteElegida" class="elegida hidden">
+        <div><b id="ceNombre"></b><span id="ceTel"></span></div>
+        <button id="btnCambiarCliente">Cambiar</button>
+      </div>
+      <!-- form nueva clienta -->
+      <div id="formNueva" class="hidden" style="margin-top:12px">
+        <label>Nombre de la nueva clienta</label>
+        <input type="text" id="nuevaNombre" />
+        <div style="height:10px"></div>
+        <label>Teléfono</label>
+        <input type="tel" id="nuevaTel" />
+        <div style="height:12px"></div>
+        <button class="btn" id="btnGuardarNueva">Guardar clienta</button>
+        <div style="height:8px"></div>
+        <button class="btn-sec btn" id="btnCancelarNueva">Cancelar</button>
+      </div>
+    </div>
+
+    <!-- 2. FOTOS (aparece al elegir clienta) -->
+    <div class="card hidden" id="cardFotos">
+      <h2>2 · Sube las fotos</h2>
+      <p style="font-size:13px;color:#6b7280;margin-bottom:14px">
+        <b>Cámara</b> = abre la cámara y haces la foto (puedes repetir las veces que quieras, se van guardando).
+        <b>Galería</b> = eliges varias fotos a la vez. Todo se sube como archivo original, sin perder calidad.
+      </p>
+      <div class="zonas">
+        <!-- ANTES -->
+        <div>
+          <div class="titzona antes">Antes</div>
+          <div class="dropzone" id="dzAntes">
+            <div class="ico">🟣</div>
+            <div class="t">Fotos del antes</div>
+            <div class="botones-zona">
+              <button class="bz" id="camAntesBtn">📷 Cámara</button>
+              <button class="bz gal" id="galAntesBtn">🖼️ Galería</button>
+            </div>
+            <div class="h">o arrastra las fotos aquí</div>
+          </div>
+          <input type="file" id="camAntes" accept="image/*" capture="environment" class="hidden" />
+          <input type="file" id="galAntes" accept="image/*" multiple class="hidden" />
+          <div class="previews" id="prevAntes"></div>
+          <div class="contador" id="contAntes"></div>
+        </div>
+        <!-- DESPUES -->
+        <div>
+          <div class="titzona despues">Después</div>
+          <div class="dropzone despues" id="dzDespues">
+            <div class="ico">🌸</div>
+            <div class="t">Fotos del después</div>
+            <div class="botones-zona">
+              <button class="bz" id="camDespuesBtn">📷 Cámara</button>
+              <button class="bz gal" id="galDespuesBtn">🖼️ Galería</button>
+            </div>
+            <div class="h">o arrastra las fotos aquí</div>
+          </div>
+          <input type="file" id="camDespues" accept="image/*" capture="environment" class="hidden" />
+          <input type="file" id="galDespues" accept="image/*" multiple class="hidden" />
+          <div class="previews" id="prevDespues"></div>
+          <div class="contador" id="contDespues"></div>
+        </div>
+      </div>
+
+      <div style="height:16px"></div>
+      <label>Nota (opcional)</label>
+      <textarea id="nota" placeholder="Ej: 1ª sesión de reductor, zona abdomen…"></textarea>
+
+      <div style="height:18px"></div>
+      <button class="btn" id="btnSubir" disabled>Subir fotos</button>
+    </div>
+
+    <div class="pie">VeneSecrets · panel interno</div>
+  </div>
+</div>
+
+<!-- ============ Supabase ============ -->
+<script src="/vendor/supabase.js"></script>
+<script>
+/* ════════════════════════════════════════════════════════════
+   CONFIGURACIÓN  ── pega aquí tus datos de Supabase
+   (los mismos que están en tu config.js del calendario)
+   ════════════════════════════════════════════════════════════ */
+// Proyecto Supabase unificado de WACRM (misma base de datos que el CRM y el calendario).
+const SUPABASE_URL  = "https://oxjlbtfyuzfpiybzxpkd.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94amxidGZ5dXpmcGl5Ynp4cGtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNTk0NTcsImV4cCI6MjA5ODczNTQ1N30.NEMKdvHQBFU4f4Z0ZWiyybNghpEE23ksoaDjrvXfqzU";
+const BUCKET = "fotos-tratamiento";
+/* ════════════════════════════════════════════════════════════ */
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// estado
+let clienteSel = null;
+let archivos = { antes: [], despues: [] };
+
+// helpers
+const $ = (id) => document.getElementById(id);
+function aviso(cont, texto, tipo){ cont.innerHTML = `<div class="msg ${tipo}">${texto}</div>`; }
+function limpiaAviso(cont){ cont.innerHTML = ""; }
+
+/* ---------- LOGIN ---------- */
+async function comprobarSesion(){
+  const { data } = await sb.auth.getSession();
+  if(data.session){ mostrarApp(data.session.user); }
+}
+function mostrarApp(user){
+  $("pantallaLogin").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("emailUsuario").textContent = user.email || "";
+}
+$("btnLogin").addEventListener("click", async () => {
+  limpiaAviso($("loginMsg"));
+  const email = $("email").value.trim();
+  const password = $("password").value;
+  if(!email || !password){ return aviso($("loginMsg"),"Escribe correo y contraseña.","err"); }
+  $("btnLogin").disabled = true; $("btnLogin").textContent = "Entrando…";
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  $("btnLogin").disabled = false; $("btnLogin").textContent = "Entrar";
+  if(error){ return aviso($("loginMsg"), "No se pudo entrar: " + error.message, "err"); }
+  mostrarApp(data.user);
+});
+$("password").addEventListener("keydown", e => { if(e.key==="Enter") $("btnLogin").click(); });
+$("btnSalir").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
+
+/* ---------- BUSCAR / ELEGIR CLIENTE ---------- */
+let tBusca;
+$("buscarCliente").addEventListener("input", () => {
+  clearTimeout(tBusca);
+  const q = $("buscarCliente").value.trim();
+  tBusca = setTimeout(() => buscarClientes(q), 200);
+});
+// al hacer clic / enfocar el campo, mostrar el desplegable con clientas
+$("buscarCliente").addEventListener("focus", () => {
+  buscarClientes($("buscarCliente").value.trim());
+});
+async function buscarClientes(q){
+  const cont = $("resultados");
+  let consulta = sb.from("clientes").select("id,nombre,telefono").order("nombre").limit(15);
+  // con texto filtra; sin texto (al hacer clic) muestra las primeras clientas
+  if(q.length >= 1){
+    consulta = sb.from("clientes").select("id,nombre,telefono")
+      .or(`nombre.ilike.%${q}%,telefono.ilike.%${q}%`).order("nombre").limit(15);
+  }
+  const { data, error } = await consulta;
+  cont.innerHTML = "";
+  if(error){ cont.innerHTML = `<div>Error: ${error.message}</div>`; cont.classList.remove("hidden"); return; }
+  if((data||[]).length === 0){
+    const vacio = document.createElement("div");
+    vacio.style.color = "#9ca3af";
+    vacio.textContent = q ? "Sin coincidencias…" : "No hay clientas todavía";
+    cont.appendChild(vacio);
+  }
+  (data||[]).forEach(c => {
+    const d = document.createElement("div");
+    d.innerHTML = `${c.nombre} <span class="tel">${c.telefono||""}</span>`;
+    d.onclick = () => elegirCliente(c);
+    cont.appendChild(d);
+  });
+  const nuevo = document.createElement("div");
+  nuevo.className = "nuevo";
+  nuevo.textContent = q ? `＋ Crear clienta nueva "${q}"` : "＋ Crear clienta nueva";
+  nuevo.onclick = () => abrirFormNueva(q);
+  cont.appendChild(nuevo);
+  cont.classList.remove("hidden");
+}
+function elegirCliente(c){
+  clienteSel = c;
+  $("resultados").classList.add("hidden");
+  $("zonaBuscador").classList.add("hidden");
+  $("formNueva").classList.add("hidden");
+  $("ceNombre").textContent = c.nombre;
+  $("ceTel").textContent = c.telefono || "(sin teléfono)";
+  $("clienteElegida").classList.remove("hidden");
+  $("cardFotos").classList.remove("hidden");   // mostrar zona de fotos
+  refrescarBotonSubir();
+}
+$("btnCambiarCliente").addEventListener("click", () => {
+  clienteSel = null;
+  archivos = { antes: [], despues: [] };
+  pintarPreviews("antes"); pintarPreviews("despues");
+  $("clienteElegida").classList.add("hidden");
+  $("cardFotos").classList.add("hidden");
+  $("zonaBuscador").classList.remove("hidden");
+  $("buscarCliente").value = "";
+  refrescarBotonSubir();
+});
+// cerrar resultados al clicar fuera
+document.addEventListener("click", e => {
+  if(!e.target.closest(".buscador")) $("resultados").classList.add("hidden");
+});
+
+/* ---------- NUEVA CLIENTE ---------- */
+function abrirFormNueva(prefill){
+  $("resultados").classList.add("hidden");
+  $("nuevaNombre").value = prefill || "";
+  $("nuevaTel").value = "";
+  $("formNueva").classList.remove("hidden");
+}
+$("btnCancelarNueva").addEventListener("click", () => $("formNueva").classList.add("hidden"));
+$("btnGuardarNueva").addEventListener("click", async () => {
+  const nombre = $("nuevaNombre").value.trim();
+  const telefono = $("nuevaTel").value.trim();
+  if(!nombre){ return aviso($("avisoGlobal"),"La nueva clienta necesita un nombre.","err"); }
+  $("btnGuardarNueva").disabled = true;
+  const { data, error } = await sb.from("clientes")
+    .insert({ nombre, telefono: telefono || null }).select("id,nombre,telefono").single();
+  $("btnGuardarNueva").disabled = false;
+  if(error){ return aviso($("avisoGlobal"),"No se pudo crear: "+error.message,"err"); }
+  limpiaAviso($("avisoGlobal"));
+  elegirCliente(data);
+});
+
+/* ---------- SELECCIÓN DE FOTOS (cámara + galería + arrastrar) ---------- */
+function conectarZona(tipo, dzId, camBtnId, galBtnId, camInputId, galInputId){
+  const dz = $(dzId), camBtn = $(camBtnId), galBtn = $(galBtnId), cam = $(camInputId), gal = $(galInputId);
+  camBtn.addEventListener("click", e => { e.stopPropagation(); cam.click(); });
+  galBtn.addEventListener("click", e => { e.stopPropagation(); gal.click(); });
+  cam.addEventListener("change", () => { añadirArchivos(tipo, cam.files); cam.value=""; });
+  gal.addEventListener("change", () => { añadirArchivos(tipo, gal.files); gal.value=""; });
+  dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("drag"); });
+  dz.addEventListener("dragleave", () => dz.classList.remove("drag"));
+  dz.addEventListener("drop", e => {
+    e.preventDefault(); dz.classList.remove("drag");
+    añadirArchivos(tipo, e.dataTransfer.files);
+  });
+}
+function añadirArchivos(tipo, fileList){
+  for(const f of fileList){
+    if(!f.type.startsWith("image/")) continue;
+    archivos[tipo].push(f);
+  }
+  pintarPreviews(tipo);
+  refrescarBotonSubir();
+}
+function pintarPreviews(tipo){
+  const cont = tipo==="antes" ? $("prevAntes") : $("prevDespues");
+  cont.innerHTML = "";
+  archivos[tipo].forEach((f, i) => {
+    const div = document.createElement("div");
+    div.className = "thumb";
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(f);
+    const x = document.createElement("button");
+    x.className = "x"; x.textContent = "×";
+    x.onclick = () => { archivos[tipo].splice(i,1); pintarPreviews(tipo); refrescarBotonSubir(); };
+    const bar = document.createElement("div"); bar.className="bar"; bar.dataset.i = i;
+    div.append(img, x, bar);
+    cont.appendChild(div);
+  });
+  const c = tipo==="antes" ? $("contAntes") : $("contDespues");
+  c.textContent = archivos[tipo].length ? `${archivos[tipo].length} foto(s) lista(s)` : "";
+}
+function refrescarBotonSubir(){
+  const total = archivos.antes.length + archivos.despues.length;
+  $("btnSubir").disabled = !(clienteSel && total > 0);
+}
+conectarZona("antes","dzAntes","camAntesBtn","galAntesBtn","camAntes","galAntes");
+conectarZona("despues","dzDespues","camDespuesBtn","galDespuesBtn","camDespues","galDespues");
+
+/* ---------- SUBIR ---------- */
+function slug(s){ return (s||"").normalize("NFD").replace(/[^a-zA-Z0-9]+/g,"-").replace(/^-+|-+$/g,"").toLowerCase(); }
+
+$("btnSubir").addEventListener("click", async () => {
+  if(!clienteSel) return;
+  const total = archivos.antes.length + archivos.despues.length;
+  if(total===0) return;
+  limpiaAviso($("avisoGlobal"));
+  $("btnSubir").disabled = true; $("btnSubir").textContent = "Subiendo…";
+
+  const sesionId = crypto.randomUUID();
+  const nota = $("nota").value.trim() || null;
+  const carpetaCliente = slug(clienteSel.nombre) + "-" + clienteSel.id.slice(0,8);
+  let subidas = 0, fallos = 0;
+  const registros = [];
+
+  for(const tipo of ["antes","despues"]){
+    for(let i=0; i<archivos[tipo].length; i++){
+      const f = archivos[tipo][i];
+      const ext = (f.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${carpetaCliente}/${tipo}/${sesionId}-${i}-${slug(f.name.replace(/\.[^.]+$/,""))}.${ext}`;
+      const { error: upErr } = await sb.storage.from(BUCKET).upload(path, f, {
+        cacheControl: "3600", upsert: false, contentType: f.type
+      });
+      if(upErr){ fallos++; continue; }
+      subidas++;
+      registros.push({
+        cliente_id: clienteSel.id, tipo, storage_path: path,
+        nombre_archivo: f.name, sesion_id: sesionId, nota
+      });
+      const cont = tipo==="antes" ? $("prevAntes") : $("prevDespues");
+      const bar = cont.querySelector(`.bar[data-i="${i}"]`);
+      if(bar) bar.style.width = "100%";
+    }
+  }
+
+  if(registros.length){
+    const { error: dbErr } = await sb.from("fotos_tratamiento").insert(registros);
+    if(dbErr){
+      aviso($("avisoGlobal"), `Las imágenes se subieron pero hubo un error al guardar el registro: ${dbErr.message}`, "err");
+      $("btnSubir").disabled = false; $("btnSubir").textContent = "Subir fotos";
+      return;
+    }
+  }
+
+  if(fallos === 0){
+    aviso($("avisoGlobal"), `✅ ${subidas} foto(s) subidas para ${clienteSel.nombre}.`, "ok");
+    archivos = { antes: [], despues: [] };
+    pintarPreviews("antes"); pintarPreviews("despues");
+    $("nota").value = "";
+  } else {
+    aviso($("avisoGlobal"), `Se subieron ${subidas}, fallaron ${fallos}. Revisa tu conexión e inténtalo otra vez.`, "err");
+  }
+  $("btnSubir").textContent = "Subir fotos";
+  refrescarBotonSubir();
+  window.scrollTo({ top:0, behavior:"smooth" });
+});
+
+/* ---------- arranque ---------- */
+comprobarSesion();
+</script>
+</body>
+</html>
