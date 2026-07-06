@@ -22,7 +22,10 @@ const SECURITY_HEADERS = [
     value: "max-age=63072000; includeSubDomains; preload",
   },
   { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "X-Frame-Options", value: "DENY" },
+  // X-Frame-Options is deliberately NOT in this shared block — it's set
+  // per-path in `headers()` below. Every route defaults to DENY, except
+  // /calendario and /fotos which get SAMEORIGIN so the embedded salon
+  // apps can be framed inside the WACRM shell.
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     // Microphone is allowed for same-origin (`self`) so the inbox
@@ -53,7 +56,9 @@ const SECURITY_HEADERS = [
       // Supabase REST + realtime (WSS). All Meta API calls happen
       // server-side, so graph.facebook.com does not belong here.
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
-      "frame-ancestors 'none'",
+      // 'self' (not 'none') so WACRM can frame its own /calendario and
+      // /fotos pages. Cross-origin framing stays blocked.
+      "frame-ancestors 'self'",
       "base-uri 'self'",
       "form-action 'self'",
     ].join("; "),
@@ -134,6 +139,22 @@ const nextConfig: NextConfig = {
         // policy don't hurt).
         source: "/:path*",
         headers: [...SECURITY_HEADERS],
+      },
+      // X-Frame-Options, applied per-path (see SECURITY_HEADERS note).
+      // Default: DENY everywhere EXCEPT the embedded salon apps.
+      {
+        source: "/:path((?!calendario|fotos).*)",
+        headers: [{ key: "X-Frame-Options", value: "DENY" }],
+      },
+      // /calendario and /fotos (page + their static assets under
+      // /public) are framed same-origin inside the WACRM shell.
+      {
+        source: "/calendario/:path*",
+        headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }],
+      },
+      {
+        source: "/fotos/:path*",
+        headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }],
       },
     ];
   },

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendario · VeneSecrets</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ===================== TOPBAR ===================== -->
+<div class="topbar">
+  <span class="brand">VeneSecrets</span>
+
+  <select class="view-select" id="viewSelect" title="Vista del calendario" aria-label="Vista del calendario" onchange="cambiarVista(this.value)">
+    <option value="dia" selected>Día</option>
+    <option value="semana">Semana</option>
+    <option value="mes">Mes</option>
+  </select>
+
+  <!-- Filtro de trabajadoras (solo en vista Día) -->
+  <div class="filtro-trab" id="filtroTrab">
+    <button type="button" class="filtro-btn" onclick="toggleFiltroTrab()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+      <span id="filtroTrabLabel">Trabajadoras</span>
+    </button>
+    <div class="filtro-pop" id="filtroTrabPop"></div>
+  </div>
+
+  <button type="button" class="filtro-btn solo-admin" title="Empleados y turnos" onclick="abrirEmpleados()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span>Empleados</span>
+  </button>
+
+  <div class="date-nav">
+    <button class="hoy-btn" onclick="irHoy()">Hoy</button>
+    <button class="arrow" onclick="navMover(-1)" aria-label="Anterior">‹</button>
+    <span class="fecha" id="fechaLabel">—</span>
+    <button class="arrow" onclick="navMover(1)" aria-label="Siguiente">›</button>
+  </div>
+
+  <div class="topbar-icons">
+    <button type="button" class="icono-top" title="Ajustes de horario" onclick="abrirConfig()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.2.61.78 1.03 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+    <div class="buscador" id="buscador">
+      <button type="button" title="Buscar clientes agendados" onclick="toggleBuscador()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      </button>
+      <div class="buscador-pop" id="buscadorPop">
+        <input type="text" id="buscadorInput" placeholder="Buscar cliente agendado…" oninput="buscarAgendados()" autocomplete="off">
+        <div class="buscador-res" id="buscadorRes">
+          <div class="buscador-hint">Escribe el nombre de un cliente para ver sus citas.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <span class="estado" id="estadoConexion">Conectando…</span>
+  <button type="button" class="hoy-btn" id="btnSalir" onclick="cerrarSesion()" style="display:none">Salir</button>
+</div>
+
+<div id="avisoConfig"></div>
+
+<!-- ===================== LAYOUT ===================== -->
+<div class="layout" id="layout" style="display:none">
+
+  <!-- ---------- Sidebar ---------- -->
+  <aside class="sidebar">
+    <!-- Mini calendario -->
+    <div class="mini-head">
+      <span class="mes" id="miniMes">—</span>
+      <span class="flechas">
+        <button onclick="miniMover(-1)" aria-label="Mes anterior">‹</button>
+        <button onclick="miniMover(1)" aria-label="Mes siguiente">›</button>
+      </span>
+    </div>
+    <table class="cal">
+      <thead><tr><th>Lu</th><th>Ma</th><th>Mi</th><th>Ju</th><th>Vi</th><th>Sá</th><th>Do</th></tr></thead>
+      <tbody id="miniBody"></tbody>
+    </table>
+
+    <!-- Saltar por semanas -->
+    <div class="side-section">
+      <div class="side-title">Saltar por semanas</div>
+      <div class="salto-grid">
+        <button onclick="saltarSemanas(1)">+1</button>
+        <button onclick="saltarSemanas(2)">+2</button>
+        <button onclick="saltarSemanas(3)">+3</button>
+        <button onclick="saltarSemanas(-1)">-1</button>
+        <button onclick="saltarSemanas(-2)">-2</button>
+        <button onclick="saltarSemanas(-3)">-3</button>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ---------- Panel del dia ---------- -->
+  <div class="panel">
+    <div class="dia-header">
+      <div class="eje-head"></div>
+      <div class="cols-head" id="colsHead"></div>
+    </div>
+    <div class="dia-scroll" id="diaScroll">
+      <div class="dia-body">
+        <div class="eje" id="eje"></div>
+        <div class="cols" id="cols"></div>
+      </div>
+    </div>
+    <!-- Vista mensual -->
+    <div class="mes-view" id="mesView" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ===================== FAB ===================== -->
+<button class="fab solo-admin" id="fab" title="Nueva cita" onclick="nuevaCitaRapida()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<!-- ===================== MENU CONTEXTUAL DE SELECCION ===================== -->
+<div class="slot-menu" id="slotMenu">
+  <button type="button" onclick="slotAccion('cita')">Nueva cita</button>
+  <button type="button" onclick="slotAccion('falta')">Añadir falta de disponibilidad</button>
+  <button type="button" onclick="slotAccion('ausencia')">Añadir ausencia</button>
+</div>
+
+<!-- ===================== DRAWER DE CITA (panel lateral) ===================== -->
+<div class="overlay drawer-overlay" id="overlay">
+  <div class="cita-drawer">
+    <!-- Cabecera -->
+    <div class="drawer-head">
+      <button class="drawer-x" onclick="cerrarModal()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <h2 id="modalTitulo">Nueva cita</h2>
+      <span id="estadoPill"></span>
+    </div>
+
+    <!-- Cliente (abre la pantalla de busqueda de clientes) -->
+    <div class="drawer-cliente" onclick="abrirBuscadorClientes()">
+      <div class="cli-avatar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+      </div>
+      <div class="cli-text" id="cliResumen">Selecciona un cliente o déjalo en blanco</div>
+      <button class="cli-add" type="button" aria-label="Elegir cliente">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    </div>
+
+    <!-- Campos de cliente (ocultos; los rellena la pantalla de busqueda). No tocar el markup: lo usa guardarCita() -->
+    <div class="cliente-panel" id="clientePanel" hidden>
+      <input type="text" id="filtroCliente">
+      <select id="selCliente" onchange="onClienteChange()"></select>
+      <label class="check"><input type="checkbox" id="chkNuevo" onchange="toggleNuevoCliente()"> Crear cliente nuevo</label>
+      <div class="nuevo-cliente" id="boxNuevoCliente">
+        <input type="text" id="nuevoNombre">
+        <input type="text" id="nuevoTelefono">
+      </div>
+    </div>
+
+    <!-- Pestañas -->
+    <div class="drawer-tabs">
+      <button class="dtab activo" id="dtabCita" onclick="drawerTab('cita')">CITA</button>
+      <button class="dtab" id="dtabNotas" onclick="drawerTab('notas')">NOTAS Y DATOS</button>
+    </div>
+
+    <!-- Cuerpo -->
+    <div class="drawer-body">
+      <input type="hidden" id="citaId">
+
+      <!-- Pestaña CITA -->
+      <div class="dpane" id="paneCita">
+        <!-- Fecha -->
+        <div class="campo">
+          <label>Fecha</label>
+          <input type="date" id="inpFecha" onchange="onInicioChange()">
+        </div>
+
+        <!-- Servicio -->
+        <div class="campo">
+          <label>Servicio</label>
+          <select id="selServicio" onchange="onServicioChange()"></select>
+          <div class="precio-info" id="precioInfo"></div>
+        </div>
+
+        <!-- Horario (formato 24h) -->
+        <div class="fila">
+          <div>
+            <label>Inicio</label>
+            <select id="inpInicio" onchange="onInicioChange()"></select>
+          </div>
+          <div>
+            <label>Fin</label>
+            <select id="inpFin"></select>
+          </div>
+        </div>
+
+        <!-- Empleado -->
+        <div class="campo">
+          <label>Empleado</label>
+          <select id="selTrabajadora"></select>
+        </div>
+      </div>
+
+      <!-- Pestaña NOTAS Y DATOS -->
+      <div class="dpane oculto" id="paneNotas">
+        <div class="campo">
+          <label>Notas de la cita</label>
+          <textarea id="inpNotas" placeholder="Observaciones, indicaciones…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pie -->
+    <div class="drawer-foot">
+      <button class="btn btn-asistio solo-admin" id="btnAsistio" onclick="marcarAsistio()" style="display:none">Marcó asistió</button>
+      <button class="btn btn-eliminar solo-admin" id="btnEliminar" onclick="eliminarCita()" style="display:none">Eliminar</button>
+      <button class="btn btn-descartar" onclick="cerrarModal()">Cerrar</button>
+      <button class="btn btn-guardar solo-admin" onclick="guardarCita()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL DE AJUSTES DE HORARIO ===================== -->
+<div class="overlay" id="overlayConfig">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head">
+      <h2>Ajustes de horario</h2>
+      <button class="cerrar" onclick="cerrarConfig()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="fila">
+        <div>
+          <label>Hora de apertura</label>
+          <input type="time" id="cfgApertura" step="1800">
+        </div>
+        <div>
+          <label>Hora de cierre</label>
+          <input type="time" id="cfgCierre" step="1800">
+        </div>
+      </div>
+
+      <label class="check" style="margin-top:2px">
+        <input type="checkbox" id="cfgTieneDescanso" onchange="toggleDescansoFields()">
+        Hay pausa / descanso
+      </label>
+
+      <div class="fila" id="cfgDescansoBox">
+        <div>
+          <label>Inicio descanso</label>
+          <input type="time" id="cfgInicioDescanso" step="1800">
+        </div>
+        <div>
+          <label>Fin descanso</label>
+          <input type="time" id="cfgFinDescanso" step="1800">
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-guardar" onclick="guardarConfig()">Guardar cambios</button>
+      <button class="btn btn-cancelar" onclick="cerrarConfig()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL DE EMPLEADOS Y TURNOS ===================== -->
+<div class="overlay" id="overlayEmpleados">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head">
+      <h2>Empleados y turnos</h2>
+      <button class="cerrar" onclick="cerrarEmpleados()">&times;</button>
+    </div>
+    <div class="modal-body" style="gap:16px">
+      <div class="emp-nuevo">
+        <input type="text" id="empNuevoNombre" placeholder="Nombre del nuevo empleado…">
+        <button class="btn btn-guardar" onclick="nuevoEmpleado()" style="flex:0 0 auto">+ Añadir</button>
+      </div>
+      <div id="empLista"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-cancelar" onclick="cerrarEmpleados()" style="flex:1">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== BUSCADOR DE CLIENTES (pantalla) ===================== -->
+<div class="overlay drawer-overlay" id="overlayClientes">
+  <div class="cliente-buscador">
+    <div class="cb-head">
+      <button class="cb-back" type="button" onclick="cerrarBuscadorClientes()" aria-label="Volver">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <h2>Búsqueda de clientes</h2>
+    </div>
+
+    <div class="cb-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" id="cbInput" placeholder="Escribir nombre, número de teléfono…" oninput="renderListaClientes()" autocomplete="off">
+    </div>
+
+    <!-- Vista: lista de clientes -->
+    <div id="cbVistaLista">
+      <button class="cb-nuevo" type="button" onclick="nuevoClienteDesdeBuscador()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Añadir nuevo cliente
+      </button>
+      <div class="cb-list" id="cbList"></div>
+    </div>
+
+    <!-- Vista: crear nuevo cliente -->
+    <div id="cbVistaNuevo" class="cb-form" style="display:none">
+      <div class="campo"><label>Nombre del nuevo cliente</label><input type="text" id="cbNuevoNombre" placeholder="Nombre y apellidos"></div>
+      <div class="campo"><label>Teléfono</label><input type="text" id="cbNuevoTelefono" placeholder="Opcional"></div>
+      <div class="cb-form-actions">
+        <button class="btn btn-descartar" type="button" onclick="volverListaClientes()">Cancelar</button>
+        <button class="btn btn-guardar" type="button" onclick="confirmarNuevoCliente()">Usar este cliente</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== PANTALLA DE LOGIN ===================== -->
+<div class="login-bg" id="loginBg" style="display:none">
+  <div class="login-card">
+    <div class="logo">📅</div>
+    <h2>VeneSecrets</h2>
+    <p>Acceso al calendario interno</p>
+    <div class="login-fields">
+      <label>Usuario (email)</label>
+      <input type="email" id="loginEmail" placeholder="tu@correo.com" autocomplete="username">
+      <label>Contraseña</label>
+      <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"
+             onkeydown="if(event.key==='Enter')hacerLogin()">
+    </div>
+    <div class="login-error" id="loginError"></div>
+    <button onclick="hacerLogin()">Entrar</button>
+  </div>
+</div>
+
+<!-- Libreria de Supabase (auto-alojada en WACRM para no depender de un CDN externo) -->
+<script src="/vendor/supabase.js"></script>
+<!-- Configuracion (Supabase + horario por defecto) -->
+<script src="js/config.js"></script>
+<!-- Logica del calendario -->
+<script src="js/app.js"></script>
+</body>
+</html>
