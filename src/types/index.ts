@@ -65,6 +65,12 @@ export interface AccountMember {
   avatar_url: string | null;
   role: AccountRole;
   joined_at: string;
+  /**
+   * Interface sections this member may open (see
+   * `@/lib/auth/sections`). `null` = no restriction (full access).
+   * Only populated for admin+ callers; null for everyone else.
+   */
+  allowed_sections: string[] | null;
 }
 
 /**

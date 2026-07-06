@@ -25,6 +25,7 @@ interface ProfileRow {
   avatar_url: string | null;
   account_role: string;
   created_at: string;
+  allowed_sections: string[] | null;
 }
 
 export async function GET() {
@@ -35,7 +36,9 @@ export async function GET() {
     // the caller's, so this query is naturally account-scoped.
     const { data, error } = await ctx.supabase
       .from("profiles")
-      .select("user_id, full_name, email, avatar_url, account_role, created_at")
+      .select(
+        "user_id, full_name, email, avatar_url, account_role, created_at, allowed_sections",
+      )
       .eq("account_id", ctx.accountId)
       .order("created_at", { ascending: true });
 
@@ -62,6 +65,9 @@ export async function GET() {
           avatar_url: row.avatar_url,
           role: row.account_role,
           joined_at: row.created_at,
+          // Section allowlist is permission config — only surface it to
+          // admins+ (who see emails too). null = no restriction.
+          allowed_sections: canSeeEmails ? (row.allowed_sections ?? null) : null,
         },
       ];
     });

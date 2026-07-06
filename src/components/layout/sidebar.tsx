@@ -29,6 +29,7 @@ import {
   Zap,
 } from "lucide-react";
 import type { AccountRole } from "@/lib/auth/roles";
+import { canAccessSection, pathToSection } from "@/lib/auth/sections";
 
 // Per-role chip metadata used in the sidebar's account strip + the
 // Members tab roster. Keeping this near both consumers in a single
@@ -133,6 +134,18 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
     !!account?.name &&
     account.name !== profile?.full_name;
 
+  // Hide nav rows this member isn't allowed to open (migration 033 /
+  // Settings → Permisos). Owners/admins and members with no restriction
+  // (`allowed_sections` null) see everything — `canAccessSection`
+  // encodes that. Ungated rows (`pathToSection` → null) always show.
+  const visibleNavItems = navItems.filter((item) => {
+    const section = pathToSection(item.href);
+    return (
+      section === null ||
+      canAccessSection(accountRole, profile?.allowed_sections, section)
+    );
+  });
+
   // Close the drawer when route changes — users opened it to navigate,
   // so once they pick a destination the drawer should get out of the way.
   useEffect(() => {
@@ -209,7 +222,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         {/* Main navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <ul className="flex flex-col gap-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive =
                 pathname === item.href ||
                 (item.href !== "/dashboard" && pathname.startsWith(item.href));
