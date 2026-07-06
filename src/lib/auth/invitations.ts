@@ -28,8 +28,29 @@ import { createHash, randomBytes } from "node:crypto";
 /** Default invite link lifetime if the caller doesn't specify. */
 export const DEFAULT_INVITE_EXPIRY_DAYS = 7;
 
-/** Hard ceiling on user-supplied `expiresInDays` (1 year). */
-export const MAX_INVITE_EXPIRY_DAYS = 365;
+/**
+ * Hard ceiling on user-supplied `expiresInDays`. Raised to ~100 years
+ * so admins can issue effectively non-expiring "indefinite" invites
+ * (the `expires_at` column is NOT NULL, so "no expiry" is modelled as
+ * a date so far out it never matters in practice).
+ */
+export const MAX_INVITE_EXPIRY_DAYS = 36500;
+
+/**
+ * Sentinel used by the "Sin caducidad" (no expiry) option in the
+ * invite dialog — ~100 years out. Anything at/above this reads as
+ * "indefinite" in the UI (see `isIndefiniteExpiry`).
+ */
+export const INDEFINITE_INVITE_EXPIRY_DAYS = 36500;
+
+/**
+ * True when an `expires_at` is far enough in the future that we should
+ * present it as "no expiry" rather than a concrete date (~50+ years).
+ */
+export function isIndefiniteExpiry(expiresAt: Date, now: Date = new Date()): boolean {
+  const fiftyYearsMs = 50 * 365 * 24 * 60 * 60 * 1000;
+  return expiresAt.getTime() - now.getTime() > fiftyYearsMs;
+}
 
 export interface GeneratedToken {
   /** Plaintext token — return to the creator ONCE, never persist. */
