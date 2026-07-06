@@ -6,6 +6,7 @@ import {
   Palette,
   PlugZap,
   Shield,
+  ShieldCheck,
   Tags,
   User,
   UsersRound,
@@ -30,6 +31,7 @@ export const SETTINGS_SECTIONS = [
   'fields',
   'deals',
   'members',
+  'permissions',
   'api',
 ] as const;
 
@@ -55,6 +57,7 @@ export const SECTION_META: Record<SettingsSection, SectionMeta> = {
   fields: { id: 'fields', label: 'Fields & tags', icon: Tags, group: 'workspace' },
   deals: { id: 'deals', label: 'Deals & currency', icon: Coins, group: 'workspace' },
   members: { id: 'members', label: 'Team members', icon: UsersRound, group: 'workspace' },
+  permissions: { id: 'permissions', label: 'Permisos', icon: ShieldCheck, group: 'workspace' },
   api: { id: 'api', label: 'API keys', icon: KeyRound, group: 'workspace' },
 };
 

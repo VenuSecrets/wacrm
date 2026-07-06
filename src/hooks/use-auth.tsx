@@ -35,6 +35,13 @@ interface Profile {
   beta_features: string[];
   account_id: string | null;
   account_role: AccountRole | null;
+  /**
+   * Interface sections this member may open (migration 033). `null`
+   * = no restriction (full access) — the backwards-compatible default
+   * for every pre-existing member. Owners/admins ignore it entirely.
+   * Consumed via `canAccessSection` in the sidebar + route guard.
+   */
+  allowed_sections: string[] | null;
 }
 
 interface AccountSummary {
@@ -138,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          "id, full_name, email, avatar_url, role, beta_features, account_id, account_role",
+          "id, full_name, email, avatar_url, role, beta_features, account_id, account_role, allowed_sections",
         )
         .eq("user_id", userId)
         .maybeSingle();
@@ -212,6 +219,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           beta_features: data.beta_features ?? [],
           account_id: data.account_id ?? null,
           account_role: accountRole,
+          // null = no restriction (full access). Defensive `?? null`
+          // covers older schemas where the column doesn't exist yet.
+          allowed_sections: data.allowed_sections ?? null,
         });
         setAccount(accountRow);
       } else {
