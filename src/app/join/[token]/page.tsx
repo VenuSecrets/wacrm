@@ -306,13 +306,13 @@ export default function JoinPage() {
           <ShieldCheck className="size-3.5 text-primary" />
           {ROLE_LABEL[peek.role]}
         </span>
-        . Link valid until{' '}
-        {new Date(peek.expires_at).toLocaleDateString(undefined, {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-        })}
-        .
+        .{' '}
+        {new Date(peek.expires_at).getFullYear() >= 2100
+          ? 'This invite does not expire.'
+          : `Link valid until ${new Date(peek.expires_at).toLocaleDateString(
+              undefined,
+              { year: 'numeric', month: 'short', day: 'numeric' },
+            )}.`}
       </CardDescription>
     </CardHeader>
   );

@@ -49,18 +49,30 @@ interface InviteMemberDialogProps {
 }
 
 const EXPIRY_OPTIONS: { value: string; label: string }[] = [
-  { value: '1', label: '1 day' },
-  { value: '7', label: '7 days' },
-  { value: '30', label: '30 days' },
+  // '36500' ≈ 100 años = "Sin caducidad" (el enlace no caduca en la
+  // práctica). Es la opción por defecto para poder añadir personal de
+  // forma indefinida sin tener que renovar enlaces.
+  { value: '36500', label: 'Sin caducidad' },
+  { value: '30', label: '30 días' },
+  { value: '7', label: '7 días' },
+  { value: '1', label: '1 día' },
 ];
 
 const ROLE_DESCRIPTIONS: Record<InviteRole, string> = {
   admin:
-    'Can invite teammates, manage settings, send messages, and edit data.',
+    'Puede invitar a otras personas, gestionar ajustes y permisos, enviar mensajes y editar datos.',
   agent:
-    'Can use the inbox, contacts, broadcasts, automations, and flows. No settings or member access.',
-  viewer: 'Read-only access across every page. Cannot send or edit anything.',
+    'Puede usar la bandeja, contactos, difusiones, automatizaciones y flujos. No accede a ajustes ni a la gestión de miembros.',
+  viewer:
+    'Solo lectura en todas las páginas. No puede enviar ni editar nada.',
 };
+
+/** Human phrase for a link lifetime — collapses the ~100-year
+ *  "indefinite" value into "no caduca" instead of a huge day count. */
+function expiryText(days: number): string {
+  if (days >= 18250) return 'no caduca';
+  return `${days} día${days === 1 ? '' : 's'}`;
+}
 
 // Server caps label at 80 chars (see src/app/api/account/invitations/route.ts).
 // Mirror it on the client so we short-circuit before the round-trip
@@ -83,14 +95,14 @@ export function InviteMemberDialog({
 }: InviteMemberDialogProps) {
   const { account } = useAuth();
   const [role, setRole] = useState<InviteRole>('agent');
-  const [expiry, setExpiry] = useState<string>('7');
+  const [expiry, setExpiry] = useState<string>('36500');
   const [label, setLabel] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<CreatedInvite | null>(null);
 
   function reset() {
     setRole('agent');
-    setExpiry('7');
+    setExpiry('36500');
     setLabel('');
     setResult(null);
     setSubmitting(false);
@@ -170,7 +182,9 @@ export function InviteMemberDialog({
     // for users in multi-team contexts where "our wacrm account"
     // wouldn't be enough to disambiguate.
     const accountName = result?.accountName ?? 'our wacrm account';
-    const message = `Join ${accountName} on wacrm using this link (valid for ${result?.expiresInDays} days): ${url}`;
+    const lifetime =
+      result != null ? expiryText(result.expiresInDays) : 'no caduca';
+    const message = `Únete a ${accountName} en el CRM con este enlace (${lifetime}): ${url}`;
     return `https://wa.me/?text=${encodeURIComponent(message)}`;
   }
 
@@ -197,11 +211,12 @@ export function InviteMemberDialog({
                 Share this link with your new teammate. They&apos;ll be able
                 to sign up (or sign in) and join the account as{' '}
                 <span className="font-medium text-muted-foreground">{result.role}</span>
-                . The link is valid for{' '}
+                .{' '}
                 <span className="font-medium text-muted-foreground">
-                  {result.expiresInDays} day{result.expiresInDays === 1 ? '' : 's'}
+                  {result.expiresInDays >= 18250
+                    ? 'El enlace no caduca.'
+                    : `El enlace es válido durante ${expiryText(result.expiresInDays)}.`}
                 </span>
-                .
               </DialogDescription>
             </DialogHeader>
 
