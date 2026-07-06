@@ -207,22 +207,25 @@
   .dia-header{display:flex;border-bottom:1px solid var(--line);background:var(--bg);flex-shrink:0;z-index:5}
   .eje-head{width:62px;flex-shrink:0}
   .cols-head{flex:1;display:flex}
-  .th-col{flex:1;min-width:0;padding:12px 8px;border-left:1px solid var(--line);display:flex;align-items:center;gap:9px}
+  .th-col{flex:1;min-width:0;padding:14px 12px;border-left:1px solid var(--line);display:flex;align-items:center;gap:11px;background:var(--bg)}
   .th-col .avatar{
-    width:32px;height:32px;border-radius:50%;background:var(--line-soft);color:var(--text);
-    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;
+    width:40px;height:40px;border-radius:50%;background:#e5e7eb;color:var(--text);
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0;
+    box-shadow:0 1px 4px rgba(0,0,0,.10);
   }
-  .th-col .info{min-width:0}
-  .th-col .nom{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .th-col .hrs{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .th-col .info{min-width:0;flex:1}
+  .th-col .nom{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+  .th-col .hrs{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+  .th-col .chev{flex-shrink:0;color:var(--muted);opacity:.7}
+  .th-col .chev svg{width:16px;height:16px;display:block}
 
   /* Cuerpo: eje horario + columnas (scroll vertical) */
   .dia-scroll{flex:1;overflow-y:auto}
   .dia-body{display:flex;position:relative}
   .eje{width:62px;flex-shrink:0;position:relative}
-  .eje .h{position:absolute;right:9px;font-size:11px;color:var(--muted);transform:translateY(-50%)}
+  .eje .h{position:absolute;right:10px;font-size:11.5px;font-weight:600;color:#9ca3af;transform:translateY(-50%);letter-spacing:-.2px}
   .cols{flex:1;display:flex;position:relative}
-  .col{flex:1;min-width:0;border-left:1px solid var(--line);position:relative}
+  .col{flex:1;min-width:0;border-left:1.5px solid var(--line);position:relative}
   .col-surface{
     position:relative;width:100%;background:#fff;
     /* Las lineas de 15 min y de hora se pintan dinamicamente en pintarFondoSurface() */
@@ -236,35 +239,55 @@
 
   /* Citas */
   .cita{
-    position:absolute;left:3px;right:3px;border-radius:8px;padding:4px 9px;color:#fff;font-size:11px;
-    overflow:hidden;cursor:grab;box-shadow:0 1px 3px rgba(0,0,0,.18);line-height:1.25;z-index:5;
-    -webkit-user-select:none;user-select:none;min-height:36px;display:flex;flex-direction:column;justify-content:flex-start;gap:1px;
+    position:absolute;left:4px;right:4px;border-radius:13px;padding:9px 36px 9px 12px;color:#fff;
+    overflow:hidden;cursor:grab;
+    box-shadow:0 2px 6px rgba(0,0,0,.18),0 0 0 1px rgba(0,0,0,.06);
+    line-height:1.35;z-index:5;
+    -webkit-user-select:none;user-select:none;min-height:50px;
+    display:flex;flex-direction:column;justify-content:flex-start;gap:2px;
   }
-  .cita.compacta{justify-content:center}
-  .cita.moviendo{cursor:grabbing;opacity:.9;box-shadow:0 10px 24px rgba(0,0,0,.30);z-index:30}
+  .cita.compacta{padding:5px 32px 5px 12px;min-height:28px;justify-content:center}
+  .cita.moviendo{cursor:grabbing;opacity:.9;box-shadow:0 10px 28px rgba(0,0,0,.32);z-index:30}
   /* Etiqueta flotante con la hora mientras se arrastra una cita */
   .move-hora{position:fixed;z-index:70;pointer-events:none;background:var(--accent);color:#fff;
         font-size:12px;font-weight:700;padding:4px 9px;border-radius:7px;white-space:nowrap;
         box-shadow:0 4px 12px rgba(0,0,0,.28)}
-  .cita .t-hora{font-weight:700;font-size:11px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .cita .t-cli{font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .cita .t-serv{font-size:10.5px;opacity:.92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* Citas cortas: se oculta la hora para garantizar nombre + servicio siempre legibles */
-  .cita.compacta{padding:3px 9px;line-height:1.2}
+  .cita .t-hora{font-weight:600;font-size:11.5px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cita .t-cli{font-weight:800;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+        text-transform:uppercase;letter-spacing:.25px}
+  .cita .t-serv{font-size:11px;opacity:.82;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* Icono circular en la esquina superior derecha */
+  .cita-ic{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;
+        background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;flex-shrink:0;pointer-events:none}
+  .cita-ic svg{width:12px;height:12px;display:block;opacity:.9}
+  /* Citas cortas */
   .cita.compacta .t-hora{display:none}
-  .cita.compacta .t-cli{font-size:11.5px}
-  .cita.asistio{filter:saturate(.85)}
+  .cita.compacta .t-cli{font-size:12px}
+  .cita.compacta .cita-ic{top:50%;transform:translateY(-50%)}
+  .cita.asistio{filter:saturate(.82)}
   .cita.asistio .t-cli::before{content:"✓ "}
-  .cita.cancelado{opacity:.55;text-decoration:line-through}
-  /* Bloqueos: falta de disponibilidad (ambar) y ausencia (rojo) */
-  .bloqueo{position:absolute;left:3px;right:3px;border-radius:8px;padding:3px 9px;color:#fff;
-        overflow:hidden;cursor:pointer;line-height:1.15;z-index:4;-webkit-user-select:none;user-select:none;min-height:30px;
-        display:flex;flex-direction:column;justify-content:center;gap:1px;box-shadow:0 1px 3px rgba(0,0,0,.18)}
-  .bloqueo .b-tit{font-weight:700;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .bloqueo .b-hora{font-size:10px;opacity:.92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .bloqueo.compacta .b-hora{display:none}   /* bloqueos cortos: solo el titulo */
-  .bloqueo.falta{background:#f59e0b}      /* ambar */
-  .bloqueo.ausencia{background:#ef4444}   /* rojo */
+  .cita.cancelado{opacity:.5;text-decoration:line-through}
+  /* Bloqueos: falta de disponibilidad y ausencia — estilo "outlined" claro */
+  .bloqueo{position:absolute;left:4px;right:4px;border-radius:10px;padding:8px 11px 8px 15px;
+        overflow:hidden;cursor:pointer;line-height:1.3;z-index:4;-webkit-user-select:none;user-select:none;min-height:34px;
+        display:flex;flex-direction:column;justify-content:center;gap:2px;}
+  .bloqueo .b-tit{font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bloqueo .b-hora{font-size:11px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bloqueo.compacta .b-hora{display:none}
+  /* Falta: fondo amarillo muy claro con borde izquierdo ambar */
+  .bloqueo.falta{
+    background:#fffbeb;color:#92400e;
+    border:1px solid #fde68a;
+    border-left:4px solid #f59e0b;
+    box-shadow:0 1px 4px rgba(245,158,11,.15);
+  }
+  /* Ausencia: fondo rojo muy claro con borde izquierdo rojo */
+  .bloqueo.ausencia{
+    background:#fff1f2;color:#9f1239;
+    border:1px solid #fecdd3;
+    border-left:4px solid #ef4444;
+    box-shadow:0 1px 4px rgba(239,68,68,.15);
+  }
   .seleccion{position:absolute;left:3px;right:3px;background:rgba(17,24,39,.14);
         border:1.5px solid var(--accent);border-radius:8px;pointer-events:none;z-index:25}
   /* Seleccion fijada: pildora blanca con la hora (como en la referencia) */
@@ -283,16 +306,16 @@
   .slot-menu button:hover{background:var(--hover)}
   .slot-menu button + button{border-top:1px solid var(--line)}
 
-  /* Indicador de hora actual */
+  /* Indicador de hora actual — punto más grande y línea más visible */
   .now-line{position:absolute;left:0;right:0;height:0;z-index:20;pointer-events:none}
-  .now-line .linea{position:absolute;left:0;right:0;top:0;border-top:1px solid var(--rojo)}
-  .now-line .punto{position:absolute;left:-4px;top:-4px;width:9px;height:9px;border-radius:50%;background:var(--rojo)}
+  .now-line .linea{position:absolute;left:0;right:0;top:0;border-top:2px solid var(--rojo)}
+  .now-line .punto{position:absolute;left:-5px;top:-5px;width:10px;height:10px;border-radius:50%;background:var(--rojo);box-shadow:0 0 0 3px rgba(239,68,68,.2)}
 
-  /* Descanso por columna (debajo de las citas; rayas diagonales + rotulo) */
+  /* Descanso por columna */
   .descanso-col{
     position:absolute;left:0;right:0;pointer-events:none;
-    border-top:1px solid var(--line);border-bottom:1px solid var(--line);
-    background:repeating-linear-gradient(-45deg,#ffffff,#ffffff 6px,#f3f4f6 6px,#f3f4f6 12px);
+    background:repeating-linear-gradient(-45deg,#f9fafb,#f9fafb 5px,#f3f4f6 5px,#f3f4f6 10px);
+    border-top:1px dashed #d1d5db;border-bottom:1px dashed #d1d5db;
   }
   .descanso-col .descanso-et{
     position:absolute;top:5px;left:9px;font-size:11px;font-weight:600;color:var(--muted-2);
@@ -340,6 +363,7 @@
   .btn-asistio{background:#16a34a;color:#fff}
   .btn-eliminar{background:#fee2e2;color:#b91c1c}
   .btn-cancelar{background:var(--hover);color:var(--muted-2)}
+  .btn-desasistio{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
   .btn:hover{filter:brightness(.95)}
   .estado-pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;margin-left:8px}
   .aviso{background:#fef2f2;color:#991b1b;padding:14px 18px;border-radius:10px;margin:16px;font-size:14px}
@@ -472,3 +496,175 @@
   .login-card button{width:100%;background:#7C3AED;color:#fff;border:0;border-radius:10px;
         padding:12px;font-size:15px;font-weight:600;cursor:pointer}
   .login-card button:hover{filter:brightness(.95)}
+
+  /* ============================================================
+     VISTA DE CANCELADAS
+     ============================================================ */
+  .vista-btn{background:rgba(17,24,39,.08);border:1px solid var(--line);color:var(--text);
+        border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;font-weight:600;white-space:nowrap}
+  .vista-btn:hover{background:var(--hover)}
+  .vista-btn.activa{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  .banner-cancel{background:#fef2f2;color:#991b1b;padding:9px 16px;font-size:13px;font-weight:600;
+        border-bottom:1px solid #fecaca;display:flex;align-items:center;gap:8px;flex-shrink:0}
+  .vacio-cancel{padding:50px 20px;text-align:center;color:#94a3b8;font-size:14px;width:100%}
+  .motivo-box{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:11px 13px;
+        font-size:13px;color:#991b1b;line-height:1.5}
+  .motivo-box b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;color:#b91c1c}
+  .motivo-box .meta{font-size:11px;color:#c2697a;margin-top:6px}
+
+  /* ============================================================
+     DIÁLOGO PERSONALIZADO (reemplaza alert / confirm / prompt)
+     ============================================================ */
+  #overlayDialog{z-index:200;align-items:center;justify-content:center;padding:20px}
+  .dlg-card{
+    max-width:380px;width:100%;border-radius:20px;overflow:visible;
+    box-shadow:0 24px 60px rgba(0,0,0,.22);animation:dlgIn .18s ease;
+    display:flex;flex-direction:column;align-items:center;padding:32px 28px 24px;gap:0;
+  }
+  @keyframes dlgIn{ from{transform:scale(.92);opacity:0} to{transform:scale(1);opacity:1} }
+  .dlg-icono{
+    width:64px;height:64px;border-radius:50%;background:var(--line-soft);
+    display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:18px;flex-shrink:0;
+  }
+  .dlg-msg{
+    font-size:14px;color:var(--text);line-height:1.6;text-align:center;
+    white-space:pre-wrap;margin-bottom:4px;width:100%;
+  }
+  .dlg-input{
+    margin-top:14px;width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;
+    font-size:14px;font-family:inherit;color:var(--text);background:#fff;
+  }
+  .dlg-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(17,24,39,.10)}
+  .dlg-foot{display:flex;gap:10px;margin-top:22px;width:100%;justify-content:center}
+  .dlg-foot .btn{flex:1;max-width:160px;text-align:center}
+
+  /* Ficha cliente */
+  .ficha-panel{width:100%;max-width:460px;background:#fff;border-radius:18px 18px 0 0;display:flex;flex-direction:column;max-height:92vh;overflow:hidden}
+  .ficha-head{display:flex;align-items:center;gap:12px;padding:16px 20px 12px;border-bottom:1px solid var(--line-soft)}
+  .ficha-head h2{font-size:16px;font-weight:700;color:var(--text);margin:0}
+  .ficha-info{display:flex;align-items:center;gap:16px;padding:20px 22px 16px;border-bottom:1px solid var(--line-soft)}
+  .ficha-ava{width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0}
+  .ficha-datos{min-width:0}
+  .ficha-nombre{font-size:17px;font-weight:700;color:var(--text)}
+  .ficha-dato{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:5px;margin-top:3px}
+  .ficha-historial-titulo{padding:14px 22px 6px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .ficha-historial{flex:1;overflow-y:auto;padding:0 22px 16px}
+  .ficha-cargando{padding:24px 0;color:var(--muted);font-size:14px;text-align:center}
+  .ficha-cita{padding:12px 0;border-bottom:1px solid var(--line-soft)}
+  .ficha-cita:last-child{border-bottom:none}
+  .ficha-cita-fecha{font-size:12px;color:var(--muted);margin-bottom:3px}
+  .ficha-cita-serv{font-size:14px;font-weight:600;color:var(--text);margin-bottom:5px}
+
+  /* Client name clickable link in drawer */
+  .cli-nombre-link{cursor:pointer;color:var(--accent);font-weight:700}
+  .cli-nombre-link:hover{text-decoration:underline}
+  .cli-sub{font-size:12px;color:var(--muted);font-weight:400}
+
+  /* Client name clickable in calendar card */
+  .t-cli[onclick]{cursor:pointer}
+  .t-cli[onclick]:hover{text-decoration:underline}
+
+  /* ============================================================
+     MENU LATERAL (nav drawer) + acceso a Fotos antes/despues
+     ============================================================ */
+  .menu-btn{
+    display:flex;align-items:center;justify-content:center;width:38px;height:38px;
+    border:0;background:none;border-radius:9px;cursor:pointer;color:var(--muted-2);
+    flex-shrink:0;margin-right:2px;
+  }
+  .menu-btn:hover{background:var(--hover);color:var(--text)}
+  .menu-btn svg{width:22px;height:22px}
+
+  .nav-backdrop{
+    position:fixed;inset:0;background:rgba(15,23,42,.40);z-index:60;
+    opacity:0;visibility:hidden;transition:opacity .2s ease;
+  }
+  .nav-backdrop.abierto{opacity:1;visibility:visible}
+
+  .nav-drawer{
+    position:fixed;top:0;left:0;height:100%;width:280px;max-width:82vw;background:var(--bg);
+    z-index:61;box-shadow:6px 0 28px rgba(0,0,0,.16);
+    transform:translateX(-100%);transition:transform .22s ease;
+    display:flex;flex-direction:column;padding:10px;
+  }
+  .nav-drawer.abierto{transform:translateX(0)}
+  .nav-head{display:flex;align-items:center;padding:10px 8px 16px;border-bottom:1px solid var(--line);margin-bottom:10px}
+  .nav-logo{font-size:16px;font-weight:700;color:var(--accent)}
+  .nav-x{margin-left:auto;border:0;background:none;cursor:pointer;color:var(--muted-2);display:flex;padding:4px;border-radius:8px}
+  .nav-x:hover{background:var(--hover);color:var(--text)}
+  .nav-x svg{width:20px;height:20px}
+  .nav-item{
+    display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+    border:0;background:none;border-radius:10px;padding:12px 12px;cursor:pointer;
+    font-size:14px;font-weight:600;color:var(--text);
+  }
+  .nav-item svg{width:20px;height:20px;color:var(--muted-2);flex-shrink:0}
+  .nav-item:hover{background:var(--hover)}
+  .nav-item.activo{background:var(--accent);color:#fff}
+  .nav-item.activo svg{color:#fff}
+
+  /* ============================================================
+     PANEL DE FOTOS ANTES / DESPUES (aislado en .fotos-scope)
+     ============================================================ */
+  .hidden{display:none !important}
+
+  .fotos-panel{width:100%;max-width:760px;height:100%;background:var(--bg);
+               display:flex;flex-direction:column;box-shadow:-8px 0 30px rgba(0,0,0,.12)}
+  .fotos-wrap{flex:1;overflow-y:auto;padding:20px}
+
+  .fotos-scope :where(input,textarea){
+    width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;
+    font-size:15px;background:#fff;color:var(--text);text-transform:none;letter-spacing:0;
+  }
+  .fotos-scope :where(input,textarea):focus{outline:none;border-color:#7C3AED;box-shadow:0 0 0 3px rgba(124,58,237,.12)}
+  .fotos-scope label{font-size:13px;font-weight:600;margin-bottom:6px;color:#374151;text-transform:none;letter-spacing:0}
+  .fotos-scope textarea{min-height:60px;resize:vertical}
+
+  .fcard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .fcard h3{font-size:15px;margin-bottom:12px;color:#5b21b6;font-weight:700}
+  .fhint{font-size:13px;color:var(--muted-2);margin-bottom:14px}
+
+  .fbtn{background:#7C3AED;color:#fff;border:none;padding:12px 18px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;width:100%}
+  .fbtn:hover{background:#5b21b6}
+  .fbtn:disabled{opacity:.5;cursor:not-allowed}
+  .fbtn-sec{background:#fff;color:#7C3AED;border:1.5px solid #7C3AED}
+  .fbtn-sec:hover{background:#faf5ff}
+
+  .fbuscador{position:relative}
+  .fresultados{position:absolute;z-index:20;left:0;right:0;top:100%;background:#fff;border:1px solid var(--line);border-top:none;border-radius:0 0 10px 10px;max-height:240px;overflow:auto;box-shadow:0 6px 16px rgba(0,0,0,.08)}
+  .fresultados div{padding:10px 12px;cursor:pointer;font-size:14px;border-bottom:1px solid #f3f4f6}
+  .fresultados div:hover{background:#faf5ff}
+  .fresultados .tel{color:var(--muted-2);font-size:12px}
+  .fresultados .nuevo{color:#7C3AED;font-weight:600}
+  .felegida{background:#faf5ff;border:1.5px solid #7C3AED;border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center}
+  .felegida b{display:block;font-size:15px;color:var(--text)}
+  .felegida span{font-size:13px;color:var(--muted-2)}
+  .felegida button{background:none;border:none;color:#DB2777;cursor:pointer;font-size:13px;font-weight:600;width:auto;padding:0}
+
+  .fzonas{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:560px){.fzonas{grid-template-columns:1fr}}
+  .fdropzone{border:2px dashed #c4b5fd;border-radius:12px;padding:18px 14px;text-align:center;background:#fbfaff}
+  .fdropzone.drag{background:#f3e8ff;border-color:#7C3AED}
+  .fdropzone .fico{font-size:28px}
+  .fdropzone .ft{font-weight:600;font-size:14px;margin-top:4px}
+  .fdropzone .fh{font-size:12px;color:var(--muted-2);margin-top:8px}
+  .fdropzone.despues{border-color:#fbcfe8;background:#fff5fa}
+  .fdropzone.despues.drag{background:#ffe4f1;border-color:#DB2777}
+  .fbotones-zona{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+  .fbz{background:#7C3AED;color:#fff;border:none;padding:10px 14px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;width:auto}
+  .fbz:hover{filter:brightness(.93)}
+  .fbz.gal{background:#fff;color:#7C3AED;border:1.5px solid #7C3AED}
+  .fdropzone.despues .fbz{background:#DB2777}
+  .fdropzone.despues .fbz.gal{background:#fff;color:#DB2777;border:1.5px solid #DB2777}
+  .ftitzona{font-size:13px;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+  .ftitzona.antes{color:#7C3AED} .ftitzona.despues{color:#DB2777}
+  .fpreviews{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px;margin-top:10px}
+  .fthumb{position:relative;border-radius:8px;overflow:hidden;aspect-ratio:1;border:1px solid var(--line)}
+  .fthumb img{width:100%;height:100%;object-fit:cover}
+  .fthumb .x{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;line-height:1;padding:0}
+  .fthumb .fbar{position:absolute;bottom:0;left:0;height:4px;background:#16a34a;width:0;transition:width .2s}
+  .fcontador{font-size:12px;color:var(--muted-2);margin-top:6px;font-weight:600}
+  .fmsg{padding:12px 14px;border-radius:10px;font-size:14px;margin-bottom:14px}
+  .fmsg.ok{background:#dcfce7;color:#166534} .fmsg.err{background:#fee2e2;color:#991b1b}
+  .fpie{text-align:center;font-size:12px;color:var(--muted);padding:10px 0 30px}

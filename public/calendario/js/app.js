@@ -1,4 +1,51 @@
 /* ============================================================
+   DIÁLOGO PERSONALIZADO (reemplaza alert / confirm / prompt nativos)
+   ============================================================ */
+function _dlg({ icono = "", mensaje, tipo = "alerta", placeholder = "" }){
+  return new Promise(resolve => {
+    document.getElementById("dlgIcono").textContent = icono;
+    document.getElementById("dlgMsg").textContent = mensaje;
+    const inp  = document.getElementById("dlgInput");
+    const foot = document.getElementById("dlgFoot");
+    foot.innerHTML = "";
+
+    if(tipo === "prompt"){
+      inp.style.display = "block";
+      inp.placeholder = placeholder || "";
+      inp.value = "";
+      inp.onkeydown = e => { if(e.key === "Enter") cerrar(inp.value); };
+      setTimeout(() => inp.focus(), 60);
+    } else {
+      inp.style.display = "none";
+      inp.onkeydown = null;
+    }
+
+    const cerrar = val => {
+      document.getElementById("overlayDialog").classList.remove("abierto");
+      resolve(val);
+    };
+
+    if(tipo === "confirm" || tipo === "prompt"){
+      const bCan = document.createElement("button");
+      bCan.className = "btn btn-descartar"; bCan.textContent = "Cancelar";
+      bCan.onclick = () => cerrar(tipo === "prompt" ? null : false);
+      foot.appendChild(bCan);
+    }
+
+    const bOk = document.createElement("button");
+    bOk.className = "btn btn-guardar"; bOk.textContent = "Aceptar";
+    bOk.onclick = () => cerrar(tipo === "prompt" ? inp.value : true);
+    foot.appendChild(bOk);
+
+    document.getElementById("overlayDialog").classList.add("abierto");
+  });
+}
+const dlgAlerta  = (msg, icono = "⚠️")  => _dlg({ icono, mensaje: msg, tipo: "alerta" });
+const dlgError   = (msg)                 => _dlg({ icono: "❌", mensaje: msg, tipo: "alerta" });
+const dlgConfirm = (msg, icono = "❓")  => _dlg({ icono, mensaje: msg, tipo: "confirm" });
+const dlgPrompt  = (msg, placeholder="") => _dlg({ icono: "✏️", mensaje: msg, tipo: "prompt", placeholder });
+
+/* ============================================================
    ESTADO GLOBAL
    ============================================================ */
 let sb;
@@ -8,6 +55,7 @@ let MINI = new Date();                  // mes del mini-calendario
 let VISTA = "dia";                      // 'dia' | 'semana' | 'mes'
 let TRAB_OCULTAS = new Set();           // ids de trabajadoras ocultas (vista dia)
 let ES_ADMIN = false;                   // true = puede editar; false = solo lectura
+let VISTA_CANCELADAS = "normal";        // "normal" = agenda | "canceladas" = solo canceladas
 
 // Configuracion de horario operativo (estado reactivo)
 let CONFIG = cargarConfig();
@@ -65,6 +113,7 @@ function mostrarLogin(){
   if(bg) bg.style.display = "flex";
   document.getElementById("layout").style.display = "none";
   const sal = document.getElementById("btnSalir"); if(sal) sal.style.display = "none";
+  const mBtn = document.getElementById("menuBtn"); if(mBtn) mBtn.style.display = "none";
   document.getElementById("estadoConexion").textContent = "";
 }
 
@@ -91,10 +140,18 @@ async function arrancarApp(){
 
   // ¿Quién entró? Solo el correo admin puede editar
   const { data:{ user } } = await sb.auth.getUser();
-  ES_ADMIN = !!(user && user.email && typeof CORREO_ADMIN !== "undefined" &&
-                user.email.toLowerCase() === CORREO_ADMIN.trim().toLowerCase());
+  // Admite varios correos administradores (lista CORREOS_ADMIN en config.js),
+  // con retrocompatibilidad al antiguo CORREO_ADMIN único.
+  const _admins = (typeof CORREOS_ADMIN !== "undefined" && Array.isArray(CORREOS_ADMIN))
+    ? CORREOS_ADMIN
+    : (typeof CORREO_ADMIN !== "undefined" ? [CORREO_ADMIN] : []);
+  ES_ADMIN = !!(user && user.email &&
+                _admins.map(e => String(e).trim().toLowerCase())
+                       .includes(user.email.toLowerCase()));
   document.body.classList.toggle("solo-lectura", !ES_ADMIN);
   const sal = document.getElementById("btnSalir"); if(sal) sal.style.display = "inline-flex";
+  const btnVista = document.getElementById("btnVista"); if(btnVista) btnVista.style.display = "inline-flex";
+  const mBtn = document.getElementById("menuBtn"); if(mBtn) mBtn.style.display = "flex";
 
   SELECTED = new Date(); MINI = new Date();
   await cargarCatalogos();
@@ -136,17 +193,17 @@ function toggleDescansoFields(){
   document.getElementById("cfgInicioDescanso").disabled = !on;
   document.getElementById("cfgFinDescanso").disabled = !on;
 }
-function guardarConfig(){
+async function guardarConfig(){
   const ap = document.getElementById("cfgApertura").value || DEFAULT_CONFIG.horaApertura;
   const ci = document.getElementById("cfgCierre").value || DEFAULT_CONFIG.horaCierre;
-  if(parseHM(ci) <= parseHM(ap)){ alert("La hora de cierre debe ser posterior a la de apertura."); return; }
+  if(parseHM(ci) <= parseHM(ap)){ await dlgAlerta("La hora de cierre debe ser posterior a la de apertura."); return; }
 
   const tiene = document.getElementById("cfgTieneDescanso").checked;
   const di = document.getElementById("cfgInicioDescanso").value || DEFAULT_CONFIG.inicioDescanso;
   const df = document.getElementById("cfgFinDescanso").value || DEFAULT_CONFIG.finDescanso;
   if(tiene){
-    if(parseHM(df) <= parseHM(di)){ alert("El fin del descanso debe ser posterior a su inicio."); return; }
-    if(parseHM(di) < parseHM(ap) || parseHM(df) > parseHM(ci)){ alert("El descanso debe estar dentro del horario de apertura y cierre."); return; }
+    if(parseHM(df) <= parseHM(di)){ await dlgAlerta("El fin del descanso debe ser posterior a su inicio."); return; }
+    if(parseHM(di) < parseHM(ap) || parseHM(df) > parseHM(ci)){ await dlgAlerta("El descanso debe estar dentro del horario de apertura y cierre."); return; }
   }
 
   CONFIG = { horaApertura:ap, horaCierre:ci, tieneDescanso:tiene, inicioDescanso:di, finDescanso:df };
@@ -198,9 +255,9 @@ function renderEmpLista(){
 async function guardarEmpleado(id){
   const g = sufijo => document.getElementById("emp_"+sufijo+"_"+id);
   const nombre = g("nombre").value.trim();
-  if(!nombre){ alert("El empleado necesita un nombre."); return; }
+  if(!nombre){ await dlgAlerta("El empleado necesita un nombre."); return; }
   const ini = g("ini").value, fin = g("fin").value;
-  if(ini && fin && parseHM(fin) <= parseHM(ini)){ alert("La salida debe ser posterior a la entrada."); return; }
+  if(ini && fin && parseHM(fin) <= parseHM(ini)){ await dlgAlerta("La salida debe ser posterior a la entrada."); return; }
   const fila = {
     nombre,
     color: g("color").value,
@@ -211,7 +268,7 @@ async function guardarEmpleado(id){
     descanso_fin: g("dfin").value || null
   };
   const { error } = await sb.from("trabajadoras").update(fila).eq("id", id);
-  if(error){ alert("Error al guardar: "+error.message); return; }
+  if(error){ await dlgError("Error al guardar: "+error.message); return; }
   await refrescarTrasEmpleados();
 }
 
@@ -222,15 +279,15 @@ async function nuevoEmpleado(){
   const fila = { nombre, activo:true, color:"#7c6ff0", orden,
                  hora_inicio:CONFIG.horaApertura, hora_fin:CONFIG.horaCierre };
   const { error } = await sb.from("trabajadoras").insert(fila);
-  if(error){ alert("Error al crear empleado: "+error.message); return; }
+  if(error){ await dlgError("Error al crear empleado: "+error.message); return; }
   document.getElementById("empNuevoNombre").value = "";
   await refrescarTrasEmpleados();
 }
 
 async function eliminarEmpleado(id){
-  if(!confirm("¿Eliminar este empleado? Si tiene citas asociadas, mejor desmárcalo como «Activo» en su lugar.")) return;
+  if(!await dlgConfirm("¿Eliminar este empleado?\nSi tiene citas asociadas, mejor desmárcalo como «Activo» en su lugar.", "🗑️")) return;
   const { error } = await sb.from("trabajadoras").delete().eq("id", id);
-  if(error){ alert("No se pudo eliminar (probablemente tiene citas). Desmárcalo como «Activo».\n\n"+error.message); return; }
+  if(error){ await dlgError("No se pudo eliminar (probablemente tiene citas). Desmárcalo como «Activo».\n\n"+error.message); return; }
   await refrescarTrasEmpleados();
 }
 
@@ -281,7 +338,7 @@ function lunesDe(date){
    CATALOGOS
    ============================================================ */
 async function cargarCatalogos(){
-  const { data: cli } = await sb.from("clientes").select("id,nombre,telefono").order("nombre");
+  const { data: cli } = await sb.from("clientes").select("id,nombre,telefono,email").order("nombre");
   CLIENTES = cli || [];
   const { data: serv } = await sb.from("servicios").select("id,nombre,duracion_minutos,precio,color,activo").eq("activo",true).order("nombre");
   SERVICIOS = serv || [];
@@ -295,7 +352,7 @@ function pintarSelectClientes(filtro=""){
   const f = filtro.trim().toLowerCase();
   const lista = CLIENTES.filter(c => !f || c.nombre.toLowerCase().includes(f));
   sel.innerHTML = '<option value="">— Selecciona un cliente —</option>' +
-    lista.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}${c.telefono?" · "+escapeHtml(c.telefono):""}</option>`).join("");
+    lista.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}${c.telefono?" · "+escapeHtml(c.telefono):""}${c.email?" · "+escapeHtml(c.email):""}</option>`).join("");
 }
 function filtrarClientes(){ pintarSelectClientes(document.getElementById("filtroCliente").value); }
 function pintarSelectServicios(){
@@ -429,6 +486,20 @@ function elegirDia(y,m,d){ SELECTED = new Date(y,m,d); MINI = new Date(y,m,1); r
 function irHoy(){ SELECTED = new Date(); MINI = new Date(SELECTED.getFullYear(),SELECTED.getMonth(),1); renderMini(); loadDay(); }
 function moverDia(n){ SELECTED.setDate(SELECTED.getDate()+n); MINI = new Date(SELECTED.getFullYear(),SELECTED.getMonth(),1); renderMini(); loadDay(); }
 
+/* Cambia entre la agenda normal y la vista de citas canceladas (mismo día) */
+function toggleVistaCanceladas(){
+  VISTA_CANCELADAS = (VISTA_CANCELADAS === "normal") ? "canceladas" : "normal";
+  const btn = document.getElementById("btnVista");
+  if(VISTA_CANCELADAS === "canceladas"){
+    btn.textContent = "🚫 Ocultar canceladas";
+    btn.classList.add("activa");
+  } else {
+    btn.textContent = "🚫 Ver canceladas";
+    btn.classList.remove("activa");
+  }
+  loadDay();
+}
+
 /* ============================================================
    CARGAR Y PINTAR EL DIA (columnas por trabajadora)
    ============================================================ */
@@ -439,7 +510,7 @@ function loadDay(){
   return loadDia();
 }
 
-const SELECT_CITAS = "id,inicio,fin,notas,estado,cliente_id,servicio_id,trabajadora_id,clientes(nombre),servicios(nombre,color)";
+const SELECT_CITAS = "id,inicio,fin,notas,estado,motivo_cancelacion,cancelada_en,cancelada_por,cliente_id,servicio_id,trabajadora_id,clientes(nombre),servicios(nombre,color)";
 const DIAS_LARGO = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
 const MESES_CORTO = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
 const MESES_LARGO = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
@@ -455,7 +526,7 @@ async function loadDia(){
   const { data, error } = await sb.from("citas").select(SELECT_CITAS)
     .gte("inicio", dayStart.toISOString())
     .lt("inicio", dayEnd.toISOString());
-  if(error){ console.error(error); alert("Error al cargar citas: "+error.message); return; }
+  if(error){ console.error(error); await dlgError("Error al cargar citas: "+error.message); return; }
 
   const { data: bloqueos } = await sb.from("bloqueos").select("*")
     .gte("inicio", dayStart.toISOString())
@@ -481,7 +552,7 @@ async function loadSemana(){
   const { data, error } = await sb.from("citas").select(SELECT_CITAS)
     .gte("inicio", weekStart.toISOString())
     .lt("inicio", weekEnd.toISOString());
-  if(error){ console.error(error); alert("Error al cargar citas: "+error.message); return; }
+  if(error){ console.error(error); await dlgError("Error al cargar citas: "+error.message); return; }
 
   const { data: bloqueos } = await sb.from("bloqueos").select("*")
     .gte("inicio", weekStart.toISOString())
@@ -509,7 +580,8 @@ function renderSemana(citas, lunes, bloqueos){
     th.className = "th-col";
     th.style.cursor = "pointer";
     th.innerHTML = `<div class="avatar"${esHoy?' style="background:var(--accent);color:#fff"':''}>${fecha.getDate()}</div>
-        <div class="info"><div class="nom">${dowCorto[i]}</div><div class="hrs">${MESES_CORTO[fecha.getMonth()]}</div></div>`;
+        <div class="info"><div class="nom">${dowCorto[i]}</div><div class="hrs">${MESES_CORTO[fecha.getMonth()]}</div></div>
+        <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>`;
     th.addEventListener("click", () => abrirDiaDesde(fecha));
     head.appendChild(th);
 
@@ -550,7 +622,7 @@ async function loadMes(){
     .gte("inicio", inicioGrid.toISOString())
     .lt("inicio", finGrid.toISOString())
     .order("inicio", { ascending:true });
-  if(error){ console.error(error); alert("Error al cargar citas: "+error.message); return; }
+  if(error){ console.error(error); await dlgError("Error al cargar citas: "+error.message); return; }
 
   renderMes(data || [], inicioGrid, m);
 }
@@ -652,16 +724,35 @@ function todasTrab(mostrar){
   renderFiltroTrab(); loadDay();
 }
 
-function renderColumnas(citas, bloqueos){
+function renderColumnas(citasTodas, bloqueos){
   bloqueos = bloqueos || [];
+
+  // Filtra según el toggle: normal = oculta canceladas; activo = muestra todas juntas
+  const citas = (VISTA_CANCELADAS === "canceladas")
+    ? citasTodas
+    : citasTodas.filter(c => c.estado !== "cancelado");
+
+  const head = document.getElementById("colsHead");
+  const cols = document.getElementById("cols");
+  const banner = document.getElementById("bannerCanceladas");
+
+  // Banner informativo cuando se muestran las canceladas
+  if(VISTA_CANCELADAS === "canceladas"){
+    const nCanc = citasTodas.filter(c => c.estado === "cancelado").length;
+    banner.style.display = "flex";
+    banner.innerHTML = nCanc
+      ? `🚫 Mostrando ${nCanc} cita(s) cancelada(s) · aparecen tachadas en el calendario`
+      : `🎉 No hay citas canceladas este día`;
+  } else {
+    banner.style.display = "none";
+  }
+
   // Columnas = trabajadoras activas no ocultas; + "Sin asignar" si hay citas sin trabajadora
   let columnas = TRABAJADORAS.filter(t => !TRAB_OCULTAS.has(t.id)).map(t => ({...t, _id:t.id, _fecha:new Date(SELECTED)}));
   if(citas.some(c => !c.trabajadora_id)){
     columnas.unshift({ _id:"__none__", nombre:"Sin asignar", color:"#94a3b8", hora_inicio:null, hora_fin:null, descanso_inicio:null, descanso_fin:null, _fecha:new Date(SELECTED) });
   }
 
-  const head = document.getElementById("colsHead");
-  const cols = document.getElementById("cols");
   head.innerHTML = ""; cols.innerHTML = "";
 
   if(!columnas.length){
@@ -682,7 +773,8 @@ function renderColumnas(citas, bloqueos){
       } else horario = `${ini}–${fin}`;
     }
     th.innerHTML = `<div class="avatar">${escapeHtml((col.nombre[0]||"?").toUpperCase())}</div>
-        <div class="info"><div class="nom">${escapeHtml(col.nombre)}</div><div class="hrs">${horario}</div></div>`;
+        <div class="info"><div class="nom">${escapeHtml(col.nombre)}</div><div class="hrs">${horario}</div></div>
+        <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>`;
     head.appendChild(th);
 
     // Columna
@@ -731,8 +823,8 @@ function pintarFondoSurface(surf){
   const qp = 15 * PXMIN;          // alto de 15 min en px (4 subdivisiones por hora)
   surf.style.backgroundColor = "#fff";
   surf.style.backgroundImage =
-      `repeating-linear-gradient(to bottom, transparent 0, transparent ${hp-1}px, #e5e7eb ${hp-1}px, #e5e7eb ${hp}px),`   // hora (mas solida)
-    + `repeating-linear-gradient(to bottom, transparent 0, transparent ${qp-1}px, #f3f4f6 ${qp-1}px, #f3f4f6 ${qp}px)`;     // 15 min (ultra fina)
+      `repeating-linear-gradient(to bottom, transparent 0, transparent ${hp-1}px, #d1d5db ${hp-1}px, #d1d5db ${hp}px),`   // hora (visible pero no agresiva)
+    + `repeating-linear-gradient(to bottom, transparent 0, transparent ${qp-1}px, #f3f4f6 ${qp-1}px, #f3f4f6 ${qp}px)`;   // 15 min (ultra sutil)
 }
 
 // Descanso dentro de una columna: rayas diagonales + rotulo, por debajo de las citas
@@ -778,18 +870,21 @@ function renderNowLine(){
 function crearCitaEl(c){
   const ini = new Date(c.inicio), fin = new Date(c.fin);
   const top = gridTop(minutosDelDia(ini));
-  const alto = Math.max(20, (fin - ini)/60000 * PXMIN);
+  const alto = Math.max(22, (fin - ini)/60000 * PXMIN);
   const color = (c.servicios && c.servicios.color) ? c.servicios.color : "#7C6FF0";
   const txt = textoContraste(color);
-  const compacta = alto < 54;   // poco alto -> oculta la hora para priorizar nombre + servicio
+  const compacta = alto < 60;   // poco alto -> oculta la hora para priorizar nombre + servicio
   const el = document.createElement("div");
   el.className = "cita" + (compacta?" compacta":"") + (c.estado==="asistio"?" asistio":"") + (c.estado==="cancelado"?" cancelado":"");
   el.style.top = top+"px"; el.style.height = alto+"px";
   el.style.background = color; el.style.color = txt;
+  const nomCli  = c.clientes  ? c.clientes.nombre  : "Sin cliente";
+  const nomServ = c.servicios ? c.servicios.nombre : "";
   el.innerHTML =
     `<div class="t-hora">${fmt(ini)} – ${fmt(fin)}</div>
-     <div class="t-cli">${escapeHtml(c.clientes?c.clientes.nombre:"Sin cliente")}</div>
-     <div class="t-serv">${escapeHtml(c.servicios?c.servicios.nombre:"")}</div>`;
+     <div class="t-cli"${c.cliente_id ? ` onclick="abrirFichaCliente('${c.cliente_id}');event.stopPropagation()"` : ""}>${escapeHtml(nomCli)}</div>
+     ${nomServ ? `<div class="t-serv">${escapeHtml(nomServ)}</div>` : ""}
+     <span class="cita-ic"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 8A6 6 0 1 1 8 2"/><polyline points="10.5 2 14 2 14 5.5"/></svg></span>`;
   el.title = `${fmt(ini)}–${fmt(fin)} · ${c.clientes?c.clientes.nombre:"Sin cliente"} · ${c.servicios?c.servicios.nombre:""}`;
   // mousedown = posible arrastre para mover; si no se mueve, en mouseup se abre el editor
   el.addEventListener("mousedown", e => { e.stopPropagation(); iniciarMoverCita(e, c, el); });
@@ -824,13 +919,13 @@ async function crearBloqueo(tipo, col, mIni, mFin){
     fin: fin.toISOString(),
     tipo: tipo === "ausencia" ? "ausencia" : "falta"
   });
-  if(error){ alert("Error al crear el bloqueo: "+error.message); return; }
+  if(error){ await dlgError("Error al crear el bloqueo: "+error.message); return; }
   loadDay();
 }
 async function eliminarBloqueo(id){
-  if(!confirm("¿Eliminar este bloqueo (falta/ausencia)?")) return;
+  if(!await dlgConfirm("¿Eliminar este bloqueo (falta/ausencia)?", "🗑️")) return;
   const { error } = await sb.from("bloqueos").delete().eq("id", id);
-  if(error){ alert("Error al eliminar: "+error.message); return; }
+  if(error){ await dlgError("Error al eliminar: "+error.message); return; }
   loadDay();
 }
 // Devuelve texto blanco u oscuro segun la luminancia del color de fondo (contraste legible)
@@ -857,6 +952,7 @@ function addShade(surf, top, bottom, etiqueta){
 let drag = null;
 function iniciarDrag(e, col, surf){
   if(!ES_ADMIN) return;                   // solo lectura: no crear citas
+  if(VISTA_CANCELADAS === "canceladas") return;   // en la vista de canceladas no se crean citas
   cerrarSlotMenu();                       // descarta cualquier seleccion previa
   const rect = surf.getBoundingClientRect();
   const y = clamp(e.clientY - rect.top, 0, gridPx());
@@ -898,6 +994,7 @@ function pintarSel(){
 let citaDrag = null;
 function iniciarMoverCita(e, c, el){
   if(!ES_ADMIN) return;                   // solo lectura: no mover citas
+  if(c.estado === "cancelado") return;    // las citas canceladas no se pueden mover
   const ini = new Date(c.inicio), fin = new Date(c.fin);
   const durMin = Math.max(15, (fin - ini)/60000);
   const surf = el.parentElement;
@@ -954,7 +1051,7 @@ window.addEventListener("mouseup", async () => {
   const { error } = await sb.from("citas")
     .update({ inicio:inicio.toISOString(), fin:fin.toISOString(), trabajadora_id:trabajadoraId })
     .eq("id", cd.c.id);
-  if(error){ alert("Error al mover la cita: "+error.message); }
+  if(error){ await dlgError("Error al mover la cita: "+error.message); }
   loadDay();
 });
 
@@ -1026,7 +1123,11 @@ function abrirModalNueva(col, mIni, mFin){
   const base = (col && col._fecha) ? col._fecha : SELECTED;
   setFechaHora(minToDate(mIni, base), minToDate(mFin, base));
   document.getElementById("btnAsistio").style.display = "none";
-  document.getElementById("btnEliminar").style.display = "none";
+  document.getElementById("btnDesasistio").style.display = "none";
+  document.getElementById("btnCancelarCita").style.display = "none";
+  document.getElementById("btnReactivar").style.display = "none";
+  document.getElementById("boxMotivo").style.display = "none";
+  document.getElementById("btnGuardar").style.display = "inline-block";
   abrir();
 }
 function abrirModalEditar(c){
@@ -1041,10 +1142,31 @@ function abrirModalEditar(c){
   document.getElementById("inpNotas").value = c.notas || "";
   setFechaHora(new Date(c.inicio), new Date(c.fin));
   const est = c.estado || "pendiente";
+  const cancelada = (est === "cancelado");
   const colores = { pendiente:"#e0e7ff;color:#3730a3", asistio:"#dcfce7;color:#166534", cancelado:"#fee2e2;color:#991b1b" };
   document.getElementById("estadoPill").innerHTML = `<span class="estado-pill" style="background:${colores[est]}">${est.toUpperCase()}</span>`;
-  document.getElementById("btnAsistio").style.display = est==="asistio" ? "none" : "inline-block";
-  document.getElementById("btnEliminar").style.display = "inline-block";
+
+  // Caja con el motivo (solo si la cita está cancelada)
+  const boxMotivo = document.getElementById("boxMotivo");
+  if(cancelada){
+    document.getElementById("motivoTexto").textContent = c.motivo_cancelacion || "(sin motivo indicado)";
+    let meta = "";
+    if(c.cancelada_en){ meta += "Cancelada el " + new Date(c.cancelada_en).toLocaleString("es-ES"); }
+    if(c.cancelada_por){ meta += (meta ? " · por " : "Cancelada por ") + escapeHtml(c.cancelada_por); }
+    document.getElementById("motivoMeta").textContent = meta;
+    boxMotivo.style.display = "block";
+  } else {
+    boxMotivo.style.display = "none";
+  }
+
+  // Botones según estado y permisos
+  document.getElementById("btnAsistio").style.display      = (ES_ADMIN && !cancelada && est!=="asistio") ? "inline-block" : "none";
+  document.getElementById("btnDesasistio").style.display   = (ES_ADMIN && !cancelada && est==="asistio") ? "inline-block" : "none";
+  document.getElementById("btnCancelarCita").style.display = (ES_ADMIN && !cancelada) ? "inline-block" : "none";
+  document.getElementById("btnReactivar").style.display    = (ES_ADMIN &&  cancelada) ? "inline-block" : "none";
+  document.getElementById("btnGuardar").style.display      = (ES_ADMIN && !cancelada) ? "inline-block" : "none";
+  document.getElementById("modalTitulo").textContent =
+    !ES_ADMIN ? "Detalle de la cita" : (cancelada ? "Cita cancelada" : "Editar cita");
   abrir();
 }
 // Escribe fecha (date) y horas (24h) en los selectores del drawer
@@ -1087,6 +1209,7 @@ function resetCliente(){
   document.getElementById("boxNuevoCliente").classList.remove("visible");
   document.getElementById("nuevoNombre").value = "";
   document.getElementById("nuevoTelefono").value = "";
+  document.getElementById("nuevoEmail").value = "";
   document.getElementById("selCliente").disabled = false;
   document.getElementById("selCliente").value = "";
   document.getElementById("clientePanel").classList.remove("abierto");
@@ -1097,9 +1220,20 @@ function toggleClientePanel(){ document.getElementById("clientePanel").classList
 function onClienteChange(){
   const sel = document.getElementById("selCliente");
   const txt = document.getElementById("cliResumen");
-  const op = sel.options[sel.selectedIndex];
-  if(sel.value && op){ txt.textContent = op.textContent; txt.classList.add("elegido"); }
-  else { txt.textContent = "Selecciona un cliente o déjalo en blanco"; txt.classList.remove("elegido"); }
+  if(sel.value){
+    const c = CLIENTES.find(x => x.id == sel.value);
+    if(c){
+      const sub = [c.telefono, c.email].filter(Boolean).join(" · ");
+      txt.innerHTML = `<span class="cli-nombre-link" onclick="abrirFichaCliente('${c.id}');event.stopPropagation()">${escapeHtml(c.nombre)}</span>${sub ? `<br><span class="cli-sub">${escapeHtml(sub)}</span>` : ""}`;
+      txt.classList.add("elegido");
+    } else {
+      txt.textContent = sel.options[sel.selectedIndex]?.textContent || "";
+      txt.classList.add("elegido");
+    }
+  } else {
+    txt.textContent = "Selecciona un cliente o déjalo en blanco";
+    txt.classList.remove("elegido");
+  }
 }
 function toggleNuevoCliente(){
   const on = document.getElementById("chkNuevo").checked;
@@ -1132,7 +1266,7 @@ function inicialesCliente(nombre){
 function renderListaClientes(){
   const q = (document.getElementById("cbInput").value || "").trim().toLowerCase();
   const lista = CLIENTES.filter(c =>
-    !q || (c.nombre||"").toLowerCase().includes(q) || (c.telefono||"").toLowerCase().includes(q));
+    !q || (c.nombre||"").toLowerCase().includes(q) || (c.telefono||"").toLowerCase().includes(q) || (c.email||"").toLowerCase().includes(q));
   const cont = document.getElementById("cbList");
   if(!lista.length){ cont.innerHTML = '<div class="cb-vacio">Sin resultados</div>'; return; }
 
@@ -1150,6 +1284,7 @@ function renderListaClientes(){
         <div class="cb-info">
           <div class="cb-nom">${escapeHtml(c.nombre||"")}</div>
           ${c.telefono ? `<div class="cb-tel">${escapeHtml(c.telefono)}</div>` : ""}
+          ${c.email ? `<div class="cb-tel">${escapeHtml(c.email)}</div>` : ""}
         </div>
       </div>`).join("")
   ).join("");
@@ -1166,24 +1301,68 @@ function elegirCliente(id){
 function nuevoClienteDesdeBuscador(){
   document.getElementById("cbNuevoNombre").value = document.getElementById("cbInput").value.trim();
   document.getElementById("cbNuevoTelefono").value = "";
+  document.getElementById("cbNuevoEmail").value = "";
   document.getElementById("cbVistaLista").style.display = "none";
   document.getElementById("cbVistaNuevo").style.display = "block";
   setTimeout(() => document.getElementById("cbNuevoNombre").focus(), 40);
 }
 // Confirma el nuevo cliente: rellena los campos ocultos que usa guardarCita()
-function confirmarNuevoCliente(){
+async function confirmarNuevoCliente(){
   const nombre = document.getElementById("cbNuevoNombre").value.trim();
-  if(!nombre){ alert("Escribe el nombre del nuevo cliente."); return; }
+  if(!nombre){ await dlgAlerta("Escribe el nombre del nuevo cliente."); return; }
   const tel = document.getElementById("cbNuevoTelefono").value.trim();
+  const email = document.getElementById("cbNuevoEmail").value.trim();
   document.getElementById("chkNuevo").checked = true;
   toggleNuevoCliente();
   document.getElementById("nuevoNombre").value = nombre;
   document.getElementById("nuevoTelefono").value = tel;
+  document.getElementById("nuevoEmail").value = email;
   const txt = document.getElementById("cliResumen");
   txt.textContent = nombre + " · nuevo cliente";
   txt.classList.add("elegido");
   cerrarBuscadorClientes();
 }
+/* ============================================================
+   FICHA DE CLIENTE
+   ============================================================ */
+async function abrirFichaCliente(clienteId){
+  const c = CLIENTES.find(x => x.id == clienteId);
+  if(!c) return;
+  const info = document.getElementById("fichaInfo");
+  const hist = document.getElementById("fichaHistorial");
+  info.innerHTML = `
+    <div class="ficha-ava">${escapeHtml(inicialesCliente(c.nombre))}</div>
+    <div class="ficha-datos">
+      <div class="ficha-nombre">${escapeHtml(c.nombre)}</div>
+      ${c.telefono ? `<div class="ficha-dato"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.81 19.79 19.79 0 01.06 2.18 2 2 0 012.03 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg> ${escapeHtml(c.telefono)}</div>` : ""}
+      ${c.email ? `<div class="ficha-dato"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> ${escapeHtml(c.email)}</div>` : ""}
+    </div>`;
+  hist.innerHTML = '<div class="ficha-cargando">Cargando historial…</div>';
+  document.getElementById("overlayFicha").classList.add("abierto");
+
+  const { data: citas, error } = await sb.from("citas")
+    .select("id,inicio,fin,estado,servicios(nombre),trabajadoras(nombre),notas")
+    .eq("cliente_id", clienteId)
+    .order("inicio", {ascending: false})
+    .limit(50);
+  if(error){ hist.innerHTML = '<div class="ficha-cargando">Error al cargar.</div>'; return; }
+  if(!citas || !citas.length){ hist.innerHTML = '<div class="ficha-cargando">Sin citas registradas.</div>'; return; }
+
+  const cols = {pendiente:"#e0e7ff;color:#3730a3", asistio:"#dcfce7;color:#166534", cancelado:"#fee2e2;color:#991b1b"};
+  hist.innerHTML = citas.map(ci => {
+    const d = new Date(ci.inicio);
+    const fecha = d.toLocaleDateString("es-ES",{weekday:"short",day:"numeric",month:"short",year:"numeric"});
+    const hora = d.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"});
+    const est = ci.estado||"pendiente";
+    return `<div class="ficha-cita">
+      <div class="ficha-cita-fecha">${escapeHtml(fecha)} · ${escapeHtml(hora)}</div>
+      <div class="ficha-cita-serv">${escapeHtml(ci.servicios?.nombre||"—")}${ci.trabajadoras?.nombre ? " · "+escapeHtml(ci.trabajadoras.nombre) : ""}</div>
+      <span class="estado-pill" style="background:${cols[est]}">${est.toUpperCase()}</span>
+    </div>`;
+  }).join("");
+}
+function cerrarFichaCliente(){ document.getElementById("overlayFicha").classList.remove("abierto"); }
+
 // Pestañas del drawer (CITA / NOTAS Y DATOS)
 function drawerTab(t){
   const esCita = t==="cita";
@@ -1215,7 +1394,7 @@ function cerrarModal(){ document.getElementById("overlay").classList.remove("abi
    GUARDAR / ASISTIO / ELIMINAR
    ============================================================ */
 async function guardarCita(){
-  if(!ES_ADMIN){ alert("Solo el usuario administrador puede modificar citas."); return; }
+  if(!ES_ADMIN){ await dlgAlerta("Solo el usuario administrador puede modificar citas."); return; }
   const citaId = document.getElementById("citaId").value;
   const trabajadoraId = document.getElementById("selTrabajadora").value || null;
   const servicioId = document.getElementById("selServicio").value;
@@ -1224,23 +1403,24 @@ async function guardarCita(){
   const horaFin = document.getElementById("inpFin").value;
   const notas = document.getElementById("inpNotas").value.trim() || null;
 
-  if(!servicioId){ alert("Elige un servicio."); return; }
-  if(!fecha || !horaIni || !horaFin){ alert("Indica fecha, inicio y fin."); return; }
+  if(!servicioId){ await dlgAlerta("Elige un servicio."); return; }
+  if(!fecha || !horaIni || !horaFin){ await dlgAlerta("Indica fecha, inicio y fin."); return; }
   const inicio = getInicioDate(), fin = getFinDate();
-  if(fin <= inicio){ alert("El fin debe ser posterior al inicio."); return; }
+  if(fin <= inicio){ await dlgAlerta("El fin debe ser posterior al inicio."); return; }
 
   let clienteId;
   if(document.getElementById("chkNuevo").checked){
     const nombre = document.getElementById("nuevoNombre").value.trim();
-    if(!nombre){ alert("Escribe el nombre del nuevo cliente."); return; }
+    if(!nombre){ await dlgAlerta("Escribe el nombre del nuevo cliente."); return; }
     const telefono = document.getElementById("nuevoTelefono").value.trim() || null;
-    const { data, error } = await sb.from("clientes").insert({nombre,telefono}).select().single();
-    if(error){ alert("Error al crear cliente: "+error.message); return; }
-    clienteId = data.id; CLIENTES.push({id:data.id,nombre:data.nombre,telefono:data.telefono});
+    const email = document.getElementById("nuevoEmail").value.trim() || null;
+    const { data, error } = await sb.from("clientes").insert({nombre,telefono,email}).select().single();
+    if(error){ await dlgError("Error al crear cliente: "+error.message); return; }
+    clienteId = data.id; CLIENTES.push({id:data.id,nombre:data.nombre,telefono:data.telefono,email:data.email});
     CLIENTES.sort((a,b)=>a.nombre.localeCompare(b.nombre));
   } else {
     clienteId = document.getElementById("selCliente").value;
-    if(!clienteId){ alert("Selecciona un cliente o marca 'Crear cliente nuevo'."); return; }
+    if(!clienteId){ await dlgAlerta("Selecciona un cliente o marca 'Crear cliente nuevo'."); return; }
   }
 
   const fila = {
@@ -1250,22 +1430,53 @@ async function guardarCita(){
   let error;
   if(citaId){ ({error} = await sb.from("citas").update(fila).eq("id",citaId)); }
   else { fila.estado="pendiente"; ({error} = await sb.from("citas").insert(fila)); }
-  if(error){ alert("Error al guardar la cita: "+error.message); return; }
+  if(error){ await dlgError("Error al guardar la cita: "+error.message); return; }
   cerrarModal(); loadDay();
 }
 async function marcarAsistio(){
   if(!ES_ADMIN) return;
   const id = document.getElementById("citaId").value; if(!id) return;
   const { error } = await sb.from("citas").update({estado:"asistio"}).eq("id",id);
-  if(error){ alert("Error: "+error.message); return; }
+  if(error){ await dlgError("Error: "+error.message); return; }
   cerrarModal(); loadDay();
 }
-async function eliminarCita(){
+// Deshace la confirmación de asistencia: la cita vuelve a "pendiente".
+async function desmarcarAsistio(){
   if(!ES_ADMIN) return;
   const id = document.getElementById("citaId").value; if(!id) return;
-  if(!confirm("¿Eliminar esta cita? No se puede deshacer.")) return;
-  const { error } = await sb.from("citas").delete().eq("id",id);
-  if(error){ alert("Error: "+error.message); return; }
+  const { error } = await sb.from("citas").update({estado:"pendiente"}).eq("id",id);
+  if(error){ await dlgError("Error: "+error.message); return; }
+  cerrarModal(); loadDay();
+}
+// "Cancelar cita" NO borra: marca estado=cancelado y guarda el motivo.
+// Así queda en el historial y se puede consultar en la vista de canceladas.
+async function cancelarCita(){
+  if(!ES_ADMIN) return;
+  const id = document.getElementById("citaId").value; if(!id) return;
+  const motivo = await dlgPrompt("Motivo de la cancelación", "ej: el cliente avisó, no se presentó…");
+  if(motivo === null) return;                  // pulsó "Cancelar"
+  if(!motivo.trim()){ await dlgAlerta("Escribe un motivo para poder llevar el control."); return; }
+  let email = null;
+  try { const { data:{ user } } = await sb.auth.getUser(); email = user ? user.email : null; } catch(e){}
+  const { error } = await sb.from("citas").update({
+    estado: "cancelado",
+    motivo_cancelacion: motivo.trim(),
+    cancelada_en: new Date().toISOString(),
+    cancelada_por: email
+  }).eq("id", id);
+  if(error){ await dlgError("Error al cancelar: "+error.message); return; }
+  cerrarModal(); loadDay();
+}
+
+// Reactivar: devuelve una cita cancelada a la agenda (estado=pendiente)
+async function reactivarCita(){
+  if(!ES_ADMIN) return;
+  const id = document.getElementById("citaId").value; if(!id) return;
+  if(!await dlgConfirm("¿Reactivar esta cita?\nVolverá a la agenda como pendiente y saldrá del listado de canceladas.", "↩️")) return;
+  const { error } = await sb.from("citas").update({
+    estado: "pendiente", motivo_cancelacion: null, cancelada_en: null, cancelada_por: null
+  }).eq("id", id);
+  if(error){ await dlgError("Error al reactivar: "+error.message); return; }
   cerrarModal(); loadDay();
 }
 
