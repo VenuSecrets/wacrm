@@ -10,6 +10,9 @@
 
 <!-- ===================== TOPBAR ===================== -->
 <div class="topbar">
+  <button type="button" class="menu-btn" id="menuBtn" title="Menú" aria-label="Abrir menú" onclick="abrirNav()" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+  </button>
   <span class="brand">VeneSecrets</span>
 
   <select class="view-select" id="viewSelect" title="Vista del calendario" aria-label="Vista del calendario" onchange="cambiarVista(this.value)">
@@ -55,11 +58,31 @@
       </div>
     </div>
   </div>
+  <button type="button" class="vista-btn" id="btnVista" onclick="toggleVistaCanceladas()" style="display:none">🚫 Ver canceladas</button>
   <span class="estado" id="estadoConexion">Conectando…</span>
   <button type="button" class="hoy-btn" id="btnSalir" onclick="cerrarSesion()" style="display:none">Salir</button>
 </div>
 
 <div id="avisoConfig"></div>
+
+<!-- ===================== MENU LATERAL (nav drawer) ===================== -->
+<div class="nav-backdrop" id="navBackdrop" onclick="cerrarNav()"></div>
+<nav class="nav-drawer" id="navDrawer" aria-hidden="true">
+  <div class="nav-head">
+    <span class="nav-logo">VeneSecrets</span>
+    <button type="button" class="nav-x" onclick="cerrarNav()" aria-label="Cerrar menú">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <button type="button" class="nav-item activo" id="navCalendario" onclick="navIr('calendario')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    <span>Calendario</span>
+  </button>
+  <button type="button" class="nav-item" id="navFotos" onclick="navIr('fotos')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    <span>Fotos antes y después</span>
+  </button>
+</nav>
 
 <!-- ===================== LAYOUT ===================== -->
 <div class="layout" id="layout" style="display:none">
@@ -96,6 +119,7 @@
 
   <!-- ---------- Panel del dia ---------- -->
   <div class="panel">
+    <div id="bannerCanceladas" class="banner-cancel" style="display:none"></div>
     <div class="dia-header">
       <div class="eje-head"></div>
       <div class="cols-head" id="colsHead"></div>
@@ -154,6 +178,7 @@
       <div class="nuevo-cliente" id="boxNuevoCliente">
         <input type="text" id="nuevoNombre">
         <input type="text" id="nuevoTelefono">
+        <input type="email" id="nuevoEmail">
       </div>
     </div>
 
@@ -207,15 +232,24 @@
           <label>Notas de la cita</label>
           <textarea id="inpNotas" placeholder="Observaciones, indicaciones…"></textarea>
         </div>
+
+        <!-- Motivo de cancelación (solo visible en citas canceladas) -->
+        <div class="motivo-box" id="boxMotivo" style="display:none">
+          <b>Motivo de la cancelación</b>
+          <span id="motivoTexto">—</span>
+          <div class="meta" id="motivoMeta"></div>
+        </div>
       </div>
     </div>
 
     <!-- Pie -->
     <div class="drawer-foot">
       <button class="btn btn-asistio solo-admin" id="btnAsistio" onclick="marcarAsistio()" style="display:none">Marcó asistió</button>
-      <button class="btn btn-eliminar solo-admin" id="btnEliminar" onclick="eliminarCita()" style="display:none">Eliminar</button>
+      <button class="btn btn-desasistio solo-admin" id="btnDesasistio" onclick="desmarcarAsistio()" style="display:none">Desafirmar asistencia</button>
+      <button class="btn btn-eliminar solo-admin" id="btnCancelarCita" onclick="cancelarCita()" style="display:none">Cancelar cita</button>
+      <button class="btn btn-asistio solo-admin" id="btnReactivar" onclick="reactivarCita()" style="display:none">Reactivar</button>
       <button class="btn btn-descartar" onclick="cerrarModal()">Cerrar</button>
-      <button class="btn btn-guardar solo-admin" onclick="guardarCita()">Guardar</button>
+      <button class="btn btn-guardar solo-admin" id="btnGuardar" onclick="guardarCita()">Guardar</button>
     </div>
   </div>
 </div>
@@ -309,7 +343,8 @@
     <!-- Vista: crear nuevo cliente -->
     <div id="cbVistaNuevo" class="cb-form" style="display:none">
       <div class="campo"><label>Nombre del nuevo cliente</label><input type="text" id="cbNuevoNombre" placeholder="Nombre y apellidos"></div>
-      <div class="campo"><label>Teléfono</label><input type="text" id="cbNuevoTelefono" placeholder="Opcional"></div>
+      <div class="campo"><label>Teléfono</label><input type="text" id="cbNuevoTelefono" placeholder="+34 612 345 678"></div>
+      <div class="campo"><label>Email</label><input type="email" id="cbNuevoEmail" placeholder="correo@ejemplo.com"></div>
       <div class="cb-form-actions">
         <button class="btn btn-descartar" type="button" onclick="volverListaClientes()">Cancelar</button>
         <button class="btn btn-guardar" type="button" onclick="confirmarNuevoCliente()">Usar este cliente</button>
@@ -336,11 +371,135 @@
   </div>
 </div>
 
+<!-- ===================== FICHA DE CLIENTE ===================== -->
+<div class="overlay drawer-overlay" id="overlayFicha">
+  <div class="ficha-panel">
+    <div class="ficha-head">
+      <button class="cb-back" type="button" onclick="cerrarFichaCliente()" aria-label="Volver">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <h2>Ficha del cliente</h2>
+    </div>
+    <div class="ficha-info" id="fichaInfo"></div>
+    <div class="ficha-historial-titulo">Historial de citas</div>
+    <div class="ficha-historial" id="fichaHistorial"></div>
+  </div>
+</div>
+
+<!-- ===================== DIÁLOGO PERSONALIZADO (reemplaza alert/confirm/prompt) ===================== -->
+<div class="overlay" id="overlayDialog">
+  <div class="modal dlg-card">
+    <div class="dlg-icono" id="dlgIcono"></div>
+    <div class="dlg-msg" id="dlgMsg"></div>
+    <input type="text" id="dlgInput" class="dlg-input" style="display:none" autocomplete="off">
+    <div class="dlg-foot" id="dlgFoot"></div>
+  </div>
+</div>
+
+<!-- ===================== PANEL DE FOTOS ANTES / DESPUES ===================== -->
+<div class="overlay drawer-overlay fotos-scope" id="overlayFotos">
+  <div class="fotos-panel">
+    <div class="cb-head">
+      <button class="cb-back" type="button" onclick="cerrarFotos()" aria-label="Volver">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <h2>📸 Fotos antes / después</h2>
+    </div>
+
+    <div class="fotos-wrap">
+      <div id="f_avisoGlobal"></div>
+
+      <!-- 1. CLIENTE -->
+      <div class="fcard">
+        <h3>1 · Elige la clienta</h3>
+        <div id="f_zonaBuscador">
+          <div class="fbuscador">
+            <input type="text" id="f_buscarCliente" placeholder="Buscar por nombre o teléfono…" autocomplete="off" />
+            <div id="f_resultados" class="fresultados hidden"></div>
+          </div>
+        </div>
+        <div id="f_clienteElegida" class="felegida hidden">
+          <div><b id="f_ceNombre"></b><span id="f_ceTel"></span></div>
+          <button id="f_btnCambiarCliente" type="button">Cambiar</button>
+        </div>
+        <!-- form nueva clienta -->
+        <div id="f_formNueva" class="hidden" style="margin-top:12px">
+          <label>Nombre de la nueva clienta</label>
+          <input type="text" id="f_nuevaNombre" />
+          <div style="height:10px"></div>
+          <label>Teléfono</label>
+          <input type="tel" id="f_nuevaTel" />
+          <div style="height:12px"></div>
+          <button class="fbtn" id="f_btnGuardarNueva" type="button">Guardar clienta</button>
+          <div style="height:8px"></div>
+          <button class="fbtn fbtn-sec" id="f_btnCancelarNueva" type="button">Cancelar</button>
+        </div>
+      </div>
+
+      <!-- 2. FOTOS (aparece al elegir clienta) -->
+      <div class="fcard hidden" id="f_cardFotos">
+        <h3>2 · Sube las fotos</h3>
+        <p class="fhint">
+          <b>Cámara</b> = abre la cámara y haces la foto (puedes repetir las veces que quieras, se van guardando).
+          <b>Galería</b> = eliges varias fotos a la vez. Todo se sube como archivo original, sin perder calidad.
+        </p>
+        <div class="fzonas">
+          <!-- ANTES -->
+          <div>
+            <div class="ftitzona antes">Antes</div>
+            <div class="fdropzone" id="f_dzAntes">
+              <div class="fico">🟣</div>
+              <div class="ft">Fotos del antes</div>
+              <div class="fbotones-zona">
+                <button class="fbz" id="f_camAntesBtn" type="button">📷 Cámara</button>
+                <button class="fbz gal" id="f_galAntesBtn" type="button">🖼️ Galería</button>
+              </div>
+              <div class="fh">o arrastra las fotos aquí</div>
+            </div>
+            <input type="file" id="f_camAntes" accept="image/*" capture="environment" class="hidden" />
+            <input type="file" id="f_galAntes" accept="image/*" multiple class="hidden" />
+            <div class="fpreviews" id="f_prevAntes"></div>
+            <div class="fcontador" id="f_contAntes"></div>
+          </div>
+          <!-- DESPUES -->
+          <div>
+            <div class="ftitzona despues">Después</div>
+            <div class="fdropzone despues" id="f_dzDespues">
+              <div class="fico">🌸</div>
+              <div class="ft">Fotos del después</div>
+              <div class="fbotones-zona">
+                <button class="fbz" id="f_camDespuesBtn" type="button">📷 Cámara</button>
+                <button class="fbz gal" id="f_galDespuesBtn" type="button">🖼️ Galería</button>
+              </div>
+              <div class="fh">o arrastra las fotos aquí</div>
+            </div>
+            <input type="file" id="f_camDespues" accept="image/*" capture="environment" class="hidden" />
+            <input type="file" id="f_galDespues" accept="image/*" multiple class="hidden" />
+            <div class="fpreviews" id="f_prevDespues"></div>
+            <div class="fcontador" id="f_contDespues"></div>
+          </div>
+        </div>
+
+        <div style="height:16px"></div>
+        <label>Nota (opcional)</label>
+        <textarea id="f_nota" placeholder="Ej: 1ª sesión de reductor, zona abdomen…"></textarea>
+
+        <div style="height:18px"></div>
+        <button class="fbtn" id="f_btnSubir" type="button" disabled>Subir fotos</button>
+      </div>
+
+      <div class="fpie">VeneSecrets · panel interno</div>
+    </div>
+  </div>
+</div>
+
 <!-- Libreria de Supabase (auto-alojada en WACRM para no depender de un CDN externo) -->
 <script src="/vendor/supabase.js"></script>
 <!-- Configuracion (Supabase + horario por defecto) -->
 <script src="js/config.js"></script>
 <!-- Logica del calendario -->
 <script src="js/app.js"></script>
+<!-- Menu lateral + panel de fotos antes/despues -->
+<script src="js/fotos.js"></script>
 </body>
 </html>
