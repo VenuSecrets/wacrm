@@ -144,9 +144,11 @@ const nextConfig: NextConfig = {
         headers: [...SECURITY_HEADERS],
       },
       // X-Frame-Options, applied per-path (see SECURITY_HEADERS note).
-      // Default: DENY everywhere EXCEPT the embedded salon apps.
+      // Default: DENY everywhere EXCEPT the embedded salon apps. The
+      // lookahead requires a `/` or end-of-path after the section name
+      // so lookalike paths (e.g. /calendarioXYZ) still get DENY.
       {
-        source: "/:path((?!calendario|fotos).*)",
+        source: "/:path((?!(?:calendario|fotos)(?:/|$)).*)",
         headers: [{ key: "X-Frame-Options", value: "DENY" }],
       },
       // /calendario and /fotos (page + their static assets under

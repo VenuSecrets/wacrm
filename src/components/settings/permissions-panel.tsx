@@ -52,7 +52,7 @@ interface RowState {
 }
 
 export function PermissionsPanel() {
-  const { user } = useAuth();
+  const { user, profileLoading } = useAuth();
   const canManage = useCan('manage-members');
 
   const [members, setMembers] = useState<AccountMember[] | null>(null);
@@ -126,10 +126,14 @@ export function PermissionsPanel() {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data?.error ?? 'No se pudo guardar');
+        // Move the baseline to the snapshot we actually saved, but keep
+        // whatever `selected` is NOW — if the admin toggled more boxes
+        // while the request was in flight, those edits stay pending
+        // (dirty) instead of being silently reverted.
         setRows((prev) => ({
           ...prev,
           [m.user_id]: {
-            selected: new Set(row.selected),
+            ...prev[m.user_id],
             baseline: new Set(row.selected),
             saving: false,
           },
@@ -161,6 +165,17 @@ export function PermissionsPanel() {
       ),
     [members, user?.id],
   );
+
+  // `useCan` reports false while the profile is still loading, so wait
+  // for it to settle before deciding — otherwise an admin sees the
+  // "solo administradores" card flash in before the grid replaces it.
+  if (profileLoading) {
+    return (
+      <div className="flex items-center justify-center py-12 text-muted-foreground">
+        <Loader2 className="size-5 animate-spin" />
+      </div>
+    );
+  }
 
   if (!canManage) {
     return (
