@@ -71,6 +71,7 @@ import {
   PRESENCE_DOT_CLASS,
   PresenceDot,
 } from '@/components/presence/presence-dot';
+import { isIndefiniteExpiresAt } from '@/lib/auth/invite-expiry';
 import { InviteMemberDialog } from './invite-member-dialog';
 import { SettingsPanelHead } from './settings-panel-head';
 import { ROLE_META } from './role-meta';
@@ -116,6 +117,9 @@ function fmtDate(iso: string): string {
 }
 
 function fmtExpiresIn(iso: string): string {
+  // Indefinite invites (the "Sin caducidad" option) would otherwise
+  // render as "expires in 36500 days" — show them as non-expiring.
+  if (isIndefiniteExpiresAt(iso)) return 'no caduca';
   const ms = new Date(iso).getTime() - Date.now();
   if (ms <= 0) return 'expired';
   const days = Math.floor(ms / (24 * 60 * 60 * 1000));

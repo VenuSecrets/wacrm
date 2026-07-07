@@ -37,8 +37,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
+import {
+  INDEFINITE_INVITE_EXPIRY_DAYS,
+  isIndefiniteDays,
+} from '@/lib/auth/invite-expiry';
 
 type InviteRole = 'admin' | 'agent' | 'viewer';
+
+const INDEFINITE_VALUE = String(INDEFINITE_INVITE_EXPIRY_DAYS);
 
 interface InviteMemberDialogProps {
   open: boolean;
@@ -49,10 +55,10 @@ interface InviteMemberDialogProps {
 }
 
 const EXPIRY_OPTIONS: { value: string; label: string }[] = [
-  // '36500' ≈ 100 años = "Sin caducidad" (el enlace no caduca en la
-  // práctica). Es la opción por defecto para poder añadir personal de
-  // forma indefinida sin tener que renovar enlaces.
-  { value: '36500', label: 'Sin caducidad' },
+  // ≈100 años = "Sin caducidad" (el enlace no caduca en la práctica).
+  // Es la opción por defecto para poder añadir personal de forma
+  // indefinida sin tener que renovar enlaces.
+  { value: INDEFINITE_VALUE, label: 'Sin caducidad' },
   { value: '30', label: '30 días' },
   { value: '7', label: '7 días' },
   { value: '1', label: '1 día' },
@@ -70,7 +76,7 @@ const ROLE_DESCRIPTIONS: Record<InviteRole, string> = {
 /** Human phrase for a link lifetime — collapses the ~100-year
  *  "indefinite" value into "no caduca" instead of a huge day count. */
 function expiryText(days: number): string {
-  if (days >= 18250) return 'no caduca';
+  if (isIndefiniteDays(days)) return 'no caduca';
   return `${days} día${days === 1 ? '' : 's'}`;
 }
 
@@ -95,14 +101,14 @@ export function InviteMemberDialog({
 }: InviteMemberDialogProps) {
   const { account } = useAuth();
   const [role, setRole] = useState<InviteRole>('agent');
-  const [expiry, setExpiry] = useState<string>('36500');
+  const [expiry, setExpiry] = useState<string>(INDEFINITE_VALUE);
   const [label, setLabel] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<CreatedInvite | null>(null);
 
   function reset() {
     setRole('agent');
-    setExpiry('36500');
+    setExpiry(INDEFINITE_VALUE);
     setLabel('');
     setResult(null);
     setSubmitting(false);
@@ -213,7 +219,7 @@ export function InviteMemberDialog({
                 <span className="font-medium text-muted-foreground">{result.role}</span>
                 .{' '}
                 <span className="font-medium text-muted-foreground">
-                  {result.expiresInDays >= 18250
+                  {isIndefiniteDays(result.expiresInDays)
                     ? 'El enlace no caduca.'
                     : `El enlace es válido durante ${expiryText(result.expiresInDays)}.`}
                 </span>

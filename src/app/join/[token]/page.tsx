@@ -52,6 +52,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { createClient } from '@/lib/supabase/client';
+import { isIndefiniteExpiresAt } from '@/lib/auth/invite-expiry';
 
 interface PeekOk {
   ok: true;
@@ -307,7 +308,7 @@ export default function JoinPage() {
           {ROLE_LABEL[peek.role]}
         </span>
         .{' '}
-        {new Date(peek.expires_at).getFullYear() >= 2100
+        {isIndefiniteExpiresAt(peek.expires_at)
           ? 'This invite does not expire.'
           : `Link valid until ${new Date(peek.expires_at).toLocaleDateString(
               undefined,
