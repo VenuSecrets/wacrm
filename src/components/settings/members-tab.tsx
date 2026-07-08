@@ -72,7 +72,7 @@ import {
   PresenceDot,
 } from '@/components/presence/presence-dot';
 import { isIndefiniteExpiresAt } from '@/lib/auth/invite-expiry';
-import { InviteMemberDialog } from './invite-member-dialog';
+import { AddMemberDialog } from './add-member-dialog';
 import { SettingsPanelHead } from './settings-panel-head';
 import { ROLE_META } from './role-meta';
 
@@ -291,7 +291,7 @@ export function MembersTab() {
           <RequireRole min="admin">
             <Button onClick={() => setInviteOpen(true)}>
               <Plus className="size-4" />
-              Invite member
+              Añadir miembro
             </Button>
           </RequireRole>
         }
@@ -508,8 +508,8 @@ export function MembersTab() {
                   No pending invitations.
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Click <span className="text-muted-foreground">Invite member</span>{' '}
-                  above to generate a shareable link.
+                  Pulsa <span className="text-muted-foreground">Añadir miembro</span>{' '}
+                  arriba para crear la cuenta de una persona por su correo.
                 </p>
               </CardContent>
             </Card>
@@ -565,7 +565,7 @@ export function MembersTab() {
         </div>
       </RequireRole>
 
-      <InviteMemberDialog
+      <AddMemberDialog
         open={inviteOpen}
         onOpenChange={setInviteOpen}
         onCreated={loadEverything}
