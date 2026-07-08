@@ -20,6 +20,7 @@
 import { NextResponse } from "next/server";
 
 import { requireRole, toErrorResponse } from "@/lib/auth/account";
+import { isPlaceholderUrl } from "@/lib/site-url";
 import {
   clampExpiryDays,
   generateInviteToken,
@@ -93,7 +94,11 @@ function isHostAllowed(
 
 function getBaseUrl(request: Request): string {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (explicit) return explicit.replace(/\/+$/, "");
+  // Ignore the `.env.local.example` placeholder (crm.example.com) — a
+  // copied-verbatim example must not become the invite-link domain.
+  if (explicit && !isPlaceholderUrl(explicit)) {
+    return explicit.replace(/\/+$/, "");
+  }
 
   const allowList = parseAllowedHosts();
   const forwardedHost = request.headers
