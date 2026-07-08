@@ -8,9 +8,25 @@
 //   3. Host header + the request's protocol — bare deployments.
 //   4. Last-resort fallback (a real origin so the link is at least
 //      well-formed) with a console.warn so the misconfig is visible.
+/**
+ * True for the `.env.local.example` placeholder (`crm.example.com` and
+ * friends). Operators routinely copy the example verbatim, which would
+ * otherwise point every login/invite link at a domain that doesn't
+ * exist. Treat it as "unset" so we fall through to the request host.
+ */
+export function isPlaceholderUrl(url: string): boolean {
+  try {
+    return /(^|\.)example\.(com|org|net)$/i.test(new URL(url).hostname);
+  } catch {
+    return true; // unparseable → don't trust it
+  }
+}
+
 export function resolveBaseUrl(request: Request): string {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (explicit) return explicit.replace(/\/+$/, "");
+  if (explicit && !isPlaceholderUrl(explicit)) {
+    return explicit.replace(/\/+$/, "");
+  }
 
   const forwardedHost = request.headers
     .get("x-forwarded-host")
