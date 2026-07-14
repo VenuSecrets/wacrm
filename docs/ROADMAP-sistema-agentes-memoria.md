@@ -26,13 +26,15 @@
 
 ## PENDIENTE — por fases
 
-### Fase 0 — Importación base de clientes (EN CURSO, bloqueada)
-- [ ] Resolver el bloqueo de teléfonos (ver arriba).
-- [ ] Staging raw (jsonb) de los 3 datasets, sin pérdida.
-- [ ] Normalizar/deduplicar; upsert a `contacts` (los que tengan teléfono) y/o a `clientes` (estética, por `client_card_id`).
-- [ ] Cargar historia: citas (1.497), resumen financiero (454), notas/bonos embebidos en notas de cita.
+### Fase 0 — Importación base de clientes (clientes HECHO; historial pendiente)
+- [x] Bloqueo de teléfonos resuelto: el export corregido trae teléfono (1.837/1.839).
+- [x] Staging `import_clientes_staging` cargada por REST (PostgREST + anon temporal, ya revocado). Mapa `client_card_id ↔ contact_id`.
+- [x] Upsert a `contacts`: **1.837 contactos** en la cuenta del salón, teléfono como identificador único, IDs propios uuid, dedup por `phone_normalized`. 2 sin teléfono omitidos.
+- [ ] **Historial** (SIGUIENTE): citas (1.497), resumen financiero (454), bonos embebidos en notas de 332 citas. Requiere decidir el anclaje (ver nota abajo).
 - [ ] Clasificación inicial (agente barato): `clasificacion`, `tags`.
-- [ ] Validar conteos staging vs final. No borrar nada hasta validar.
+- [ ] Rellenar los ~4 emails perdidos por dedup (opcional).
+
+> ⚠️ **Orden a resolver antes del historial:** los clientes reales quedaron en `contacts` (por teléfono), pero las tablas de historial que creamos en la migración 036 (`bonos`/`pagos`/`cliente_eventos`) y la `citas` de estética cuelgan de `clientes`. Hay que re-anclar el historial a `contacts` (tablas vacías → trivial) para que el agente lea todo por `contact_id`.
 
 ### Fase 1 — Esquema de memoria (HECHO: migraciones 035–037)
 
